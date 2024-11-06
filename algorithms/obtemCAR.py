@@ -29,7 +29,7 @@ __copyright__ = '(C) 2024 by Prof Cazaroli e Leandro França'
 # This will get replaced with a git SHA1 when you do a git archive
 
 __revision__ = '$Format:%H$'
-
+#xxxx
 from qgis.PyQt.QtCore import QCoreApplication, QVariant
 from qgis.core import (
             QgsProcessingAlgorithm,
