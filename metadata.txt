@@ -25,9 +25,9 @@ hasProcessingProvider=yes
 # Tags are comma separated with spaces allowed
 tags=CAR, geoCAR, cadastro, imovel, rural, sicar, georural, brazil, GeoOne
 
-homepage=https://github.com/OpenGeoOne/GeoCAR/wiki/Sobre-o-GeoCAR
+homepage=https://github.com/OpenGeoOne/GeoCAR/wiki
 category=Cartography
-icon=images/geocar_logo.jpg
+icon=images/geocar.png
 # experimental flag
 experimental=False
 
