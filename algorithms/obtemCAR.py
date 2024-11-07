@@ -121,10 +121,6 @@ class obtemCAR(QgsProcessingAlgorithm):
         
         # =============================================================================================
         # requisição ao GeoServer
-        # construir o link
-        geoserver_url = "http://167.88.39.28:8080/geoserver/Geoone/wfs" # "http://localhost:8080/geoserver/Geoone/wfs"
-        geoserver_Camada = f"Geoone:{layer}"
-        
         crs = 'EPSG:4674'
         
         minX = extensao.xMinimum()
@@ -132,19 +128,21 @@ class obtemCAR(QgsProcessingAlgorithm):
         minY = extensao.yMinimum()
         maxY = extensao.yMaximum()
 
+        geoserver_url = "http://167.88.39.28:8080/geoserver/Geoone/wfs" # "http://localhost:8080/geoserver/Geoone/wfs"
+        geoserver_Camada = f"Geoone:{layer}"
+        
         wfs_url = (  # O GeoServer para fornecer ShapeFile precisa ser ZIP, pois há vários arquivos
             f"{geoserver_url}?service=WFS&version=1.0.0&request=GetFeature"
             f"&typeName={geoserver_Camada}&outputFormat=SHAPE-ZIP"
             f"&bbox={minX},{minY},{maxX},{maxY},{crs}"
         )
         
-        response = requests.get(wfs_url, auth=('admin', 'Ge@nista2024')) # geoserver
-        # fonte = """pagingEnabled='true' preferCoordinatesForWfsT11='false' restrictToRequestBBOX='1' srsname='EPSG:4674' typename='Geoone:Area_Maior_1800m' url='http://167.88.39.28:8080/geoserver/Geoone/wfs' version='auto'"""
-        # camada = QgsVectorLayer(fonte,'Teste','WFS')
+        response = requests.get(wfs_url) # geoserver
+        #response = requests.get(wfs_url, auth=('admin', 'Ge@nista2024'))
 
         if response.status_code == 200:
             project_dir = QgsProject.instance().homePath()  # Obtém o diretório do projeto
-            car_folder = os.path.join(project_dir, 'CAR')   # Defina o caminho para a subpasta 'CAR'
+            car_folder = os.path.join(project_dir, 'Dados/CAR')   # Defina o caminho para a subpasta 'CAR'
 
             # Crie a pasta 'CAR' se ela não existir
             if not os.path.exists(car_folder):
@@ -179,7 +177,7 @@ class obtemCAR(QgsProcessingAlgorithm):
                         feedback.pushInfo(f"Erro ao carregar a camada: {layer_name}")
         else:
             feedback.pushInfo(f"Erro ao obter a camada do GeoServer: {response.status_code}")
-            
+     
         return {} 
         
     def name(self):
