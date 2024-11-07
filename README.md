@@ -1,6 +1,6 @@
 <!-- PROJECT LOGO -->
 <p align="center">
-    <img src="https://github.com/OpenGeoOne/GeoCAR/blob/main/images/geocar_logo.png" alt="Logo" width="90" height="75">
+    <img src="https://github.com/OpenGeoOne/GeoCAR/blob/main/images/geocar_logo.jpg" alt="Logo" width="90" height="75">
   <h3 align="center">GeoCAR</h3>
   <p align="center">
     <b><i>Plugin do QGIS para o Cadastro Ambiental Rural conforme normas técnicas do SiCAR Federal.</i><b>
@@ -39,18 +39,12 @@
 
 ### Consultar base do CAR
 Conecta a base de dados do CAR no servidor da Geoone. É possível baixar dados dos imóveis certificados no formato SHP, obtendo-se mais informações complementares.
-<div align="center">
-    
-https://user-images.githubusercontent.com/88212377/161190002-e3f211bd-a337-4f4a-9632-25ff67b07eb1.mp4
-    
+<div align="center">  
 </div>
 
 ### Prepara Arquivos ZIP para o CAR
 Esta ferramenta cria os arquivos Zip das camadas com feições do QGIS para serem depois importadas pelo App do CAR.
-<div align="center">
-    
-https://user-images.githubusercontent.com/88212377/161395789-9c55d2d3-3e60-4a2e-92b9-a16a204a87c5.mp4
-    
+<div align="center">    
 </div>
 
 ## Como contribuir aprendendo mais
@@ -58,13 +52,9 @@ https://user-images.githubusercontent.com/88212377/161395789-9c55d2d3-3e60-4a2e-
  href="https://geoone.com.br/pvgeoincra2/"><img
  style="border: 2px solid ;" alt="GeoCAR no QGIS"
  title="CURSO NA GEOONE"
- src="https://user-images.githubusercontent.com/88212377/161396191-32d9775a-d877-4eed-b8d1-61f07caf4af8.jpg"></a>
+ src="https://files.curseduca.com/04a4f1db-3c21-47da-8b58-d1d3ceed8d90/facefe689e70437ed8f9f108228e80f64e046bbd.webp"></a>
 <br>
 </div>
-<div style="text-align: center;"><a
- style="font-weight: bold;"
- href="https://geoone.com.br/pvgeoincra2/">CLIQUE 
-    : Cadastro Ambiental Rural com o plugin GeoCAR no QGIS</a></div>
 
 
 ## Colaboradores
