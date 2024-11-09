@@ -64,7 +64,7 @@ class obtemCAR(QgsProcessingAlgorithm):
         1: 'Area_Maior_1800m',
         2: 'Area_Superior_45graus',
     }
-      
+
     def initAlgorithm(self, config):
         self.addParameter(
             QgsProcessingParameterExtent(
@@ -90,14 +90,14 @@ class obtemCAR(QgsProcessingAlgorithm):
 
         option = self.parameterAsEnum(parameters, self.WFS, context)
         layer = self.nome.get(option)
-        
+
         # =============================================================================================
         # verificar área a ser pesquisada; não pode ser maior que 5000 km²
         crsSrc = QgsCoordinateReferenceSystem(QgsProject().instance().crs())
         crsDest = crsSrc
         proj2geo = QgsCoordinateTransform(crsSrc, crsDest, QgsProject.instance())
         extensao = proj2geo.transform(extensao)
-        
+
         center_x = extensao.center().x()
         center_y = extensao.center().y()
         # Calcular o fuso UTM (cada fuso UTM tem 6 graus de largura)
@@ -111,18 +111,18 @@ class obtemCAR(QgsProcessingAlgorithm):
         transform = QgsCoordinateTransform(crsDest, crsProj, QgsProject.instance())
         extensao_proj = transform.transformBoundingBox(extensao)
         area = extensao_proj.area() / 1e6  # Dividir por 1.000.000 para converter para km²
-        
+
         feedback.pushInfo(f"Área de {area} km²")
-        
+
         if area > 5000:
             feedback.pushInfo("Área não pode ser maior que 5000 km²")
             feedback.pushInfo(f"Área da extensão: {area:.2f} km²")
             return {} # Parar o processamento retornando None
-        
+
         # =============================================================================================
         # requisição ao GeoServer
         crs = 'EPSG:4674'
-        
+
         minX = extensao.xMinimum()
         maxX = extensao.xMaximum()
         minY = extensao.yMinimum()
@@ -130,15 +130,14 @@ class obtemCAR(QgsProcessingAlgorithm):
 
         geoserver_url = "http://167.88.39.28:8080/geoserver/Geoone/wfs" # "http://localhost:8080/geoserver/Geoone/wfs"
         geoserver_Camada = f"Geoone:{layer}"
-        
+
         wfs_url = (  # O GeoServer para fornecer ShapeFile precisa ser ZIP, pois há vários arquivos
             f"{geoserver_url}?service=WFS&version=1.0.0&request=GetFeature"
             f"&typeName={geoserver_Camada}&outputFormat=SHAPE-ZIP"
             f"&bbox={minX},{minY},{maxX},{maxY},{crs}"
         )
-        
+
         response = requests.get(wfs_url) # geoserver
-        #response = requests.get(wfs_url, auth=('admin', 'Ge@nista2024'))
 
         if response.status_code == 200:
             project_dir = QgsProject.instance().homePath()  # Obtém o diretório do projeto
@@ -147,18 +146,18 @@ class obtemCAR(QgsProcessingAlgorithm):
             # Crie a pasta 'CAR' se ela não existir
             if not os.path.exists(car_folder):
                 os.makedirs(car_folder)
-            
+
             zip_file_path = os.path.join(car_folder, f"{layer}.zip")  # Nome do arquivo ZIP
-            
+
             with open(zip_file_path, 'wb') as zip_file:
                 zip_file.write(response.content)  # Salva o arquivo ZIP na pasta 'CAR'
-            
+
             # Extraindo o conteúdo do arquivo ZIP
             with zipfile.ZipFile(zip_file_path, 'r') as zip_ref:
                 zip_ref.extractall(car_folder)  # Extrai os arquivos na pasta 'CAR'
-            
+
             feedback.pushInfo(f"Camada extraída com sucesso para: {car_folder}")
-            
+
             # Adicionando a camada ao QGIS
             for file in os.listdir(car_folder):
                 if file.endswith(".shp") and file[:-4] == layer:  # Verifica se é o arquivo shapefile
@@ -171,15 +170,15 @@ class obtemCAR(QgsProcessingAlgorithm):
                         root = QgsProject.instance().layerTreeRoot()
                         QgsProject.instance().addMapLayer(layer, False)  # Adiciona a camada sem exibi-la imediatamente
                         root.insertLayer(0, layer)  # Insere a camada no topo da árvore de camadas
-                        
+
                         feedback.pushInfo(f"Camada adicionada ao QGIS: {layer_name}")
                     else:
                         feedback.pushInfo(f"Erro ao carregar a camada: {layer_name}")
         else:
             feedback.pushInfo(f"Erro ao obter a camada do GeoServer: {response.status_code}")
-     
-        return {} 
-        
+
+        return {}
+
     def name(self):
         return 'obtemCAR'.lower()
 
