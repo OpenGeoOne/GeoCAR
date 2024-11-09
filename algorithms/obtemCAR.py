@@ -53,7 +53,7 @@ class obtemCAR(QgsProcessingAlgorithm):
     EXTENT = 'EXTENT'
     WFS = 'WFS'
 
-    mapping ={
+    mapping = {
                0: 'Áreas dos Imóveis com CAR',
                1: 'Áreas com altitude maior que 1.800 metros',
                2: 'Áreas com declividade superior a 45 graus',
@@ -131,7 +131,7 @@ class obtemCAR(QgsProcessingAlgorithm):
         geoserver_url = "http://167.88.39.28:8080/geoserver/Geoone/wfs"
         geoserver_Camada = f"Geoone:{layer}"
 
-        wfs_url = (  # O GeoServer para fornecer ShapeFile precisa ser ZIP, pois há vários arquivos
+        wfs_url = (
             f"{geoserver_url}?service=WFS&version=1.0.0&request=GetFeature"
             f"&typeName={geoserver_Camada}&outputFormat=SHAPE-ZIP"
             f"&bbox={minX},{minY},{maxX},{maxY},{crs}"
@@ -183,7 +183,7 @@ class obtemCAR(QgsProcessingAlgorithm):
         return 'obtemCAR'.lower()
 
     def displayName(self):
-        return self.tr('Camadas de Interesse')
+        return self.tr('Baixar camadas do CAR')
 
     def group(self):
         return self.tr(self.groupId())
@@ -201,7 +201,7 @@ class obtemCAR(QgsProcessingAlgorithm):
         return QIcon(os.path.join(os.path.dirname(os.path.dirname(__file__)), 'images/geocar.png'))
 
     def shortHelpString(self):
-        txt = 'Baixar camada CAR a partir de uma extensão (retângulo).'
+        txt = 'Baixar camadas do CAR a partir de uma extensão (retângulo).'
         """footer = '''<div>
                       <div align="center">
                       <img style="width: 100%; height: auto;" src="data:image/jpg;base64,'''+ INCRA_GeoOne +'''
