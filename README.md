@@ -46,7 +46,7 @@ Esta ferramenta cria os arquivos Zip das camadas com feições do QGIS para sere
 
 ## Como contribuir aprendendo mais
 <div style="text-align: center;"><a
- href="https://portal.geoone.com.br/m/courses"><img
+ href="https://geoone.com.br/pvcar2/"><img
  style="border: 2px solid ;" alt="GeoCAR no QGIS"
  title="CURSO NA GEOONE"
  src="https://files.curseduca.com/04a4f1db-3c21-47da-8b58-d1d3ceed8d90/facefe689e70437ed8f9f108228e80f64e046bbd.webp"></a>
