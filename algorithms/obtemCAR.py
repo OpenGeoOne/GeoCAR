@@ -128,7 +128,7 @@ class obtemCAR(QgsProcessingAlgorithm):
         minY = extensao.yMinimum()
         maxY = extensao.yMaximum()
 
-        geoserver_url = "http://167.88.39.28:8080/geoserver/Geoone/wfs" # "http://localhost:8080/geoserver/Geoone/wfs"
+        geoserver_url = "http://167.88.39.28:8080/geoserver/Geoone/wfs"
         geoserver_Camada = f"Geoone:{layer}"
 
         wfs_url = (  # O GeoServer para fornecer ShapeFile precisa ser ZIP, pois há vários arquivos
