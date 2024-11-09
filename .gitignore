@@ -1,0 +1,9 @@
+
+__pycache__/__init__.cpython-312.pyc
+*.pyc
+__pycache__/GeoCAR.cpython-312.pyc
+__pycache__/__init__.cpython-312.pyc
+__pycache__/GeoCAR_provider.cpython-312.pyc
+algorithms/__pycache__/obtemCAR.cpython-312.pyc
+algorithms/__pycache__/preparaCAR.cpython-312.pyc
+/algorithms/__pycache__
