@@ -26,16 +26,14 @@ __author__ = 'Prof Cazaroli e Leandro França'
 __date__ = '2024-09-30'
 __copyright__ = '(C) 2024 by Prof Cazaroli e Leandro França'
 
-# This will get replaced with a git SHA1 when you do a git archive
-
-__revision__ = '$Format:%H$'
-
 from qgis.core import QgsProcessingProvider
 from qgis.PyQt.QtGui import QIcon
 import os
 
-from .algorithms.obtemCAR import obtemCAR
+# from .algorithms.obtemCAR import obtemCAR
 from .algorithms.preparaCAR import preparaCAR
+from .algorithms.baixarCAR import BaixarCAR
+
 
 class GeoCARProvider(QgsProcessingProvider):
     def __init__(self):
@@ -45,8 +43,9 @@ class GeoCARProvider(QgsProcessingProvider):
         pass
 
     def loadAlgorithms(self):
-        self.addAlgorithm(obtemCAR())
+        # self.addAlgorithm(obtemCAR())
         self.addAlgorithm(preparaCAR())
+        self.addAlgorithm(BaixarCAR())
 
     def id(self):
         return 'GeoCAR'
