@@ -37,6 +37,7 @@ from qgis.core import (QgsProject,
                        QgsProcessingParameterFolderDestination)
 from qgis.PyQt.QtGui import QIcon
 import os
+from GeoCAR.images.Imgs import *
 import zipfile
 
 class preparaCAR(QgsProcessingAlgorithm):
@@ -52,7 +53,7 @@ class preparaCAR(QgsProcessingAlgorithm):
         return 'preparaCAR'
 
     def displayName(self):
-        return self.tr('Prepara Arquivos Zip para o CAR')
+        return self.tr('Prepara Zip para o CAR')
 
     def group(self):
         return self.tr(self.groupId())
@@ -64,24 +65,25 @@ class preparaCAR(QgsProcessingAlgorithm):
         return QIcon(os.path.join(os.path.dirname(os.path.dirname(__file__)), 'images/geocar.png'))
 
     def shortHelpString(self):
-        txt = "Prepara Arquivos ShapeFiles com feições para Zip."
+        txt = "Prepara camadas do QGIS em Arquivos ShapeFiles compactados no formato ZIP (.zip)."
 
-        """footer = '''<div>
+        footer = '''<div>
                       <div align="center">
                       <img style="width: 100%; height: auto;" src="data:image/jpg;base64,'''+ CAR_GeoOne +'''
                       </div>
                       <div align="right">
                       <p align="right">
-                      <a href="https://github.com/OpenGeoOne/GeoCAR/wiki/Sobre-o-GeoCAR#banco-de-dados-geocar"><span style="font-weight: bold;">Clique aqui para conhecer o modelo GeoRural da GeoOne</span></a><br>
+                      <a href="https://geoone.com.br/pvcar2/"><span style="font-weight: bold;">Conheça o curso de Cadastro Ambiental Rural (CAR)</span></a>
+                      </p>
+                      <p align="right">
+                      <a href="https://portal.geoone.com.br/m/lessons/car"><span style="font-weight: bold;">Acesse seu curso na GeoOne</span></a>
                       </p>
                       <a target="_blank" rel="noopener noreferrer" href="https://geoone.com.br/"><img title="GeoOne" src="data:image/png;base64,'''+ GeoOne +'''"></a>
-                      <p><i>"Cadastro automatizado, fácil e direto ao ponto é na GeoOne!"</i></p>
+                      <p><i>"Mapeamento automatizado, fácil e direto ao ponto é na GeoOne!"</i></p>
                       </div>
                     </div>'''
         return txt + footer
-        """
-        return txt
-    
+
     def initAlgorithm(self, config=None):
         # Define the folder destination parameter
         self.addParameter(
@@ -93,7 +95,7 @@ class preparaCAR(QgsProcessingAlgorithm):
 
     def processAlgorithm(self, parameters, context, feedback):
         output_folder = self.parameterAsString(parameters, self.OUTPUT_FOLDER, context)
-        
+
         # Defina o diretório de exportação
         caminho = output_folder
 
@@ -105,29 +107,29 @@ class preparaCAR(QgsProcessingAlgorithm):
                         continue
                     # Define o caminho+nome do Shapefile
                     camArq = os.path.join(caminho, c.name())
-                    
+
                     # Exporta a camada para Shapefile
                     error = QgsVectorFileWriter.writeAsVectorFormat(
                         c, camArq + ".shp", "UTF-8", c.crs(), "ESRI Shapefile"
                     )
-                    
+
                     if error[0] == QgsVectorFileWriter.NoError:
                         # Lista de extensões associadas ao Shapefile
                         extensoes = [".shp", ".shx", ".dbf", ".prj", ".cpg"]
-                        
+
                         # Caminhos completos para os arquivos gerados
                         shapefile_files = [
                             camArq + ext for ext in extensoes if os.path.exists(camArq + ext)
                         ]
-                        
+
                         # Nome do arquivo ZIP para a camada
                         nomeZip = os.path.join(caminho, c.name() + ".zip")
-                        
+
                         # Compacta os arquivos da camada em um ZIP
                         with zipfile.ZipFile(nomeZip, 'w') as zipf:
                             for f in shapefile_files:
                                 zipf.write(f, os.path.basename(f))  # Adiciona o arquivo ao ZIP
-                        
+
                         # Apaga os arquivos Shapefile após compactar
                         for f in shapefile_files:
                             try:
@@ -136,7 +138,7 @@ class preparaCAR(QgsProcessingAlgorithm):
                                 feedback.pushInfo(f"Erro ao remover {f} {e}")
                     else:
                         feedback.pushInfo(f"Erro ao exportar a camada {c.name()}: {error[0]}")
-        
+
         feedback.pushInfo(f"Observe os arquivos Zip na pasta: {output_folder}")
-        
+
         return {}
