@@ -1,6 +1,6 @@
 <!-- PROJECT LOGO -->
 <p align="center">
-    <img src="https://github.com/OpenGeoOne/GeoCAR/blob/main/images/geocar_logo.jpg" alt="Logo" width="90" height="55">
+    <img src="https://github.com/OpenGeoOne/GeoCAR/blob/main/images/geocar_logo.jpg" alt="Logo" width="60" height="55">
   <h3 align="center">GeoCAR</h3>
   <p align="center">
     <b><i>Plugin do QGIS para o Cadastro Ambiental Rural conforme normas técnicas do SiCAR Federal.</i><b>
@@ -54,7 +54,7 @@ Esta ferramenta cria os arquivos Zip das camadas com feições do QGIS para sere
 </div>
 
 ## Autores
-Prof Cazaroli 
+Prof Cazaroli
 <div style="text-align: center;"><a
  href="https://www.linkedin.com/in/prof-cazaroli-458377274/"><img
  style="border: 0px solid ;width: 20px" alt="GeoCAR no QGIS"
@@ -69,4 +69,3 @@ Leandro França
  title="Leandro França"
  src="https://user-images.githubusercontent.com/52215653/163875911-3ff4d34b-bf67-4b2b-9d2c-8525c1c011a6.png"></a>
 <br>
-
