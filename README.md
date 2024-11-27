@@ -35,7 +35,7 @@
 
 
 ### Consultar base do CAR
-Conecta a base de dados do CAR no servidor da Geoone. É possível baixar dados dos imóveis certificados no formato SHP, obtendo-se mais informações complementares.
+Conecta a base de dados do CAR no servidor da GeoOne. É possível baixar dados dos imóveis certificados no formato SHP, obtendo-se mais informações complementares.
 <div align="center">  
 </div>
 
