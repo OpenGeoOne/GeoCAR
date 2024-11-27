@@ -8,7 +8,7 @@ qgisMinimumVersion=3.10
 description=Cadastro Ambiental Rural
 version=0.1
 author=Prof Cazaroli e Leandro França
-email=suporteo@geoone.com.br
+email=suporte@geoone.com.br
 
 about=Ferramentas para cadastro ambiental de imóveis rurais conforme normas técnicas do Sistema Nacional de Cadastro Ambiental Rural (Sicar).
 
