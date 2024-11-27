@@ -30,7 +30,6 @@ from qgis.core import QgsProcessingProvider
 from qgis.PyQt.QtGui import QIcon
 import os
 
-# from .algorithms.obtemCAR import obtemCAR
 from .algorithms.preparaCAR import preparaCAR
 from .algorithms.baixarCAR import BaixarCAR
 
@@ -43,7 +42,6 @@ class GeoCARProvider(QgsProcessingProvider):
         pass
 
     def loadAlgorithms(self):
-        # self.addAlgorithm(obtemCAR())
         self.addAlgorithm(preparaCAR())
         self.addAlgorithm(BaixarCAR())
 
