@@ -1,6 +1,6 @@
 <!-- PROJECT LOGO -->
 <p align="center">
-    <img src="https://github.com/OpenGeoOne/GeoCAR/blob/main/images/geocar_logo.jpg" alt="Logo" width="60" height="55">
+    <img src="https://github.com/OpenGeoOne/GeoCAR/blob/main/images/car.png" alt="Logo" width="90">
   <h3 align="center">GeoCAR</h3>
   <p align="center">
     <b><i>Plugin do QGIS para o Cadastro Ambiental Rural conforme normas técnicas do SiCAR Federal.</i><b>
@@ -35,7 +35,7 @@
 
 
 ### Consultar base do CAR
-Conecta a base de dados do CAR no servidor da Geoone. É possível baixar dados dos imóveis certificados no formato SHP, obtendo-se mais informações complementares.
+Conecta a base de dados do CAR no servidor da GeoOne. É possível baixar dados dos imóveis certificados no formato SHP, obtendo-se mais informações complementares.
 <div align="center">  
 </div>
 
