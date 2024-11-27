@@ -1,6 +1,6 @@
 <!-- PROJECT LOGO -->
 <p align="center">
-    <img src="https://github.com/OpenGeoOne/GeoCAR/blob/main/images/car.png" alt="Logo" width="60" height="55">
+    <img src="https://github.com/OpenGeoOne/GeoCAR/blob/main/images/car.png" alt="Logo" width="90">
   <h3 align="center">GeoCAR</h3>
   <p align="center">
     <b><i>Plugin do QGIS para o Cadastro Ambiental Rural conforme normas técnicas do SiCAR Federal.</i><b>
