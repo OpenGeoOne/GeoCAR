@@ -30,7 +30,7 @@ from qgis.PyQt.QtCore import QCoreApplication, QVariant
 from qgis.core import *
 import os
 from qgis.PyQt.QtGui import QIcon
-from GeoCAR.images.Imgs import *
+from geocar.images.Imgs import *
 
 
 class baixarCAR(QgsProcessingAlgorithm):
@@ -157,7 +157,7 @@ class baixarCAR(QgsProcessingAlgorithm):
         return QCoreApplication.translate('Processing', string)
 
     def createInstance(self):
-        return BaixarCAR()
+        return baixarCAR()
 
     def icon(self):
         return QIcon(os.path.join(os.path.dirname(os.path.dirname(__file__)), 'images/geocar.png'))
