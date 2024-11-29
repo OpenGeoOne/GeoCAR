@@ -37,7 +37,7 @@ from qgis.core import (QgsProject,
                        QgsProcessingParameterFolderDestination)
 from qgis.PyQt.QtGui import QIcon
 import os
-from GeoCAR.images.Imgs import *
+from geocar.images.Imgs import *
 import zipfile
 
 class preparaCAR(QgsProcessingAlgorithm):
