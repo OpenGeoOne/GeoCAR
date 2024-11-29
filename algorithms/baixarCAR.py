@@ -33,7 +33,7 @@ from qgis.PyQt.QtGui import QIcon
 from GeoCAR.images.Imgs import *
 
 
-class BaixarCAR(QgsProcessingAlgorithm):
+class baixarCAR(QgsProcessingAlgorithm):
 
     INPUT = 'INPUT'
     OUTPUT = 'OUTPUT'
