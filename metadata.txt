@@ -21,8 +21,8 @@ repository=https://github.com/OpenGeoOne/GeoCAR
 hasProcessingProvider=yes
 # Uncomment the following line and add your changelog:
 # changelog=
-  0.2 - Bug fix for loading plugin
-  0.1 - Initial version
+0.2 - Bug fix for loading plugin
+0.1 - Initial version
 
 # Tags are comma separated with spaces allowed
 tags=CAR, geoCAR, cadastro, imovel, rural, sicar, georural, brazil, GeoOne
