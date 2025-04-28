@@ -39,18 +39,26 @@ class baixarCAR(QgsProcessingAlgorithm):
     OUTPUT = 'OUTPUT'
     EXTENT = 'EXTENT'
     WFS = 'WFS'
+    GEOONE = 'GEOONE'
 
     mapping = { 0: 'Imóveis do Sicar',
                # 1: 'Nova camada',
             }
 
-    layer_name = {    0: 'sicar_imoveis_xx',
-                     # 1: 'nova_camada',
+    layer_name =       {0: 'sicar_imoveis_xx',
+                       # 1: 'nova_camada',
             }
 
     links = {     mapping[0]: 'https://geoserver.car.gov.br/geoserver/sicar/wfs',
                   # mapping[1]: 'http://geserver.geoone',
             }
+    
+    layer_name_geoone = {0: 'GeoCAR:xx',
+            }
+    
+    links_geoone = {     mapping[0]: 'http://geoonecloud.com/geoserver/GeoCAR/wfs',
+            }
+
 
     def initAlgorithm(self, config):
 
@@ -67,6 +75,14 @@ class baixarCAR(QgsProcessingAlgorithm):
                 self.tr('Camada'),
                 options = self.links.keys(),
                 defaultValue= 0
+            )
+        )
+
+        self.addParameter(
+            QgsProcessingParameterBoolean(
+                self.GEOONE,
+                self.tr('Consultar base da GeoOne'),
+                defaultValue= False
             )
         )
 
@@ -88,14 +104,30 @@ class baixarCAR(QgsProcessingAlgorithm):
             raise QgsProcessingException(self.invalidSourceError(parameters, self.EXTENT))
 
         crsSrc = QgsCoordinateReferenceSystem(QgsProject().instance().crs())
-        crsDest = QgsCoordinateReferenceSystem('EPSG:4674')
+        crsDest = QgsCoordinateReferenceSystem('EPSG:4326')
         proj2geo = QgsCoordinateTransform(crsSrc, crsDest, QgsProject.instance())
         extensao = proj2geo.transform(extensao)
 
+        # Verificar tamanho da extensão
+        y_min = extensao.yMinimum()
+        y_max = extensao.yMaximum()
+        x_min = extensao.xMinimum()
+        x_max = extensao.xMaximum()
+
+        if (x_max - x_min) > 1 or (y_max - y_min) > 1:
+            raise QgsProcessingException('Faça a consulta para um retângulo de MENOR extensão!')
+
         option = self.parameterAsEnum(parameters, self.WFS, context)
         layer = self.mapping[option]
-        name = self.layer_name[option]
-        link = self.links[layer]
+
+        geoone = self.parameterAsBool(parameters, self.GEOONE, context)
+
+        if geoone:
+            name = self.layer_name_geoone[option]
+            link = self.links_geoone[layer]
+        else:
+            name = self.layer_name[option]
+            link = self.links[layer]
 
         path = os.path.dirname(__file__) + "/shp" + "/BR_UF_2020.shp"
         estado = QgsVectorLayer(path, "BR_UF_2020", "ogr")
@@ -163,7 +195,7 @@ class baixarCAR(QgsProcessingAlgorithm):
         return QIcon(os.path.join(os.path.dirname(os.path.dirname(__file__)), 'images/geocar.png'))
 
     def shortHelpString(self):
-        txt = 'Baixa camadas do CAR a partir de uma extensão (retângulo).'
+        txt = 'Baixa camadas do CAR a partir de uma extensão (retângulo).' 
 
         footer = '''<div>
                       <div align="center">
@@ -181,6 +213,7 @@ class baixarCAR(QgsProcessingAlgorithm):
                       </div>
                     </div>'''
         return txt + footer
+
 
 class Renamer (QgsProcessingLayerPostProcessorInterface):
     def __init__(self, layer_name):
