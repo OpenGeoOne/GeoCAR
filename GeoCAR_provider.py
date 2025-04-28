@@ -43,6 +43,7 @@ class GeoCARProvider(QgsProcessingProvider):
     def loadAlgorithms(self):
         self.addAlgorithm(baixarCAR())
         self.addAlgorithm(preparaCAR())
+        #self.addAlgorithm(preparaCAR())
 
     def id(self):
         return 'GeoCAR'
