@@ -7,7 +7,7 @@ name=GeoCAR
 qgisMinimumVersion=3.10
 description=Cadastro Ambiental Rural
 version=0.3
-author=Prof Cazaroli e Leandro França
+author=Prof Cazaroli, Leandro França
 email=suporte@geoone.com.br
 
 about=Ferramentas para cadastro ambiental de imóveis rurais conforme normas técnicas do Sistema Nacional de Cadastro Ambiental Rural (Sicar).
