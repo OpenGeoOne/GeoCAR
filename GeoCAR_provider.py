@@ -31,7 +31,9 @@ from qgis.PyQt.QtGui import QIcon
 import os
 
 from .algorithms.baixarCAR import baixarCAR
-from .algorithms.preparaCAR import preparaCAR
+from .algorithms.preparaCAR_ZIP import preparaCAR_ZIP
+from .algorithms.preparaCAR_SHP import preparaCAR_SHP
+from .algorithms.preparaCAR_KML import preparaCAR_KML
 
 class GeoCARProvider(QgsProcessingProvider):
     def __init__(self):
@@ -42,8 +44,9 @@ class GeoCARProvider(QgsProcessingProvider):
 
     def loadAlgorithms(self):
         self.addAlgorithm(baixarCAR())
-        self.addAlgorithm(preparaCAR())
-        #self.addAlgorithm(preparaCAR())
+        self.addAlgorithm(preparaCAR_ZIP())
+        self.addAlgorithm(preparaCAR_SHP())
+        self.addAlgorithm(preparaCAR_KML())
 
     def id(self):
         return 'GeoCAR'
