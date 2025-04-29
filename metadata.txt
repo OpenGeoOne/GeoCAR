@@ -6,7 +6,7 @@
 name=GeoCAR
 qgisMinimumVersion=3.10
 description=Cadastro Ambiental Rural
-version=0.3
+version=0.4
 author=Prof Cazaroli, Leandro França
 email=suporte@geoone.com.br
 
@@ -21,6 +21,7 @@ repository=https://github.com/OpenGeoOne/GeoCAR
 hasProcessingProvider=yes
 # Uncomment the following line and add your changelog:
 # changelog=
+  0.4: Shapefile and KML Generation
   0.3: Consult layers also in the GeoOne database
   0.2: Bug fix for loading plugin
   0.1: Initial version

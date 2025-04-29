@@ -21,6 +21,14 @@
         <li><a href="#prepara-arquivos-zip-para-o-car">Prepara Arquivos ZIP para o CAR</a></li>
       </ul>
       </li>
+      <ul>
+        <li><a href="#prepara-arquivos-shapefile-para-o-car">Prepara Arquivos Shapefile para o CAR</a></li>
+      </ul>
+      </li>
+      <ul>
+        <li><a href="#prepara-arquivos-kml-para-o-car">Prepara Arquivos KML para o CAR</a></li>
+      </ul>
+      </li>
     <li>
       <a href="#como-contribuir-aprendendo-mais">Como contribuir aprendendo mais</a>
     </li>
@@ -41,6 +49,16 @@ Conecta a base de dados do CAR no servidor da GeoOne. É possível baixar dados 
 
 ### Prepara Arquivos ZIP para o CAR
 Esta ferramenta cria os arquivos Zip das camadas com feições do QGIS para serem depois importadas pelo App do CAR.
+<div align="center">    
+</div>
+
+### Prepara Arquivos Shapefile para o CAR
+Esta ferramenta cria os 4 arquivos de um Shapefile das camadas com feições do QGIS para serem depois importadas para o CAR. Por exemplo, Estado da Bahia.
+<div align="center">    
+</div>
+
+### Prepara Arquivos KML para o CAR
+Esta ferramenta cria os arquivos KML das camadas com feições do QGIS.
 <div align="center">    
 </div>
 
