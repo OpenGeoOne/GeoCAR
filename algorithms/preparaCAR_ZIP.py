@@ -47,7 +47,7 @@ class preparaCAR_ZIP(QgsProcessingAlgorithm):
         return QCoreApplication.translate('Processing', string)
 
     def createInstance(self):
-        return preparaCAR()
+        return preparaCAR_ZIP()
 
     def name(self):
         return 'preparaCAR_ZIP'
