@@ -65,7 +65,7 @@ class preparaCAR_ZIP(QgsProcessingAlgorithm):
         return QIcon(os.path.join(os.path.dirname(os.path.dirname(__file__)), 'images/geocar.png'))
 
     def shortHelpString(self):
-        txt = "Prepara camadas do QGIS em Arquivos ShapeFiles compactados no formato ZIP (.zip)."
+        txt = "Exporta camadas do QGIS em Arquivos Shapefile compactados no formato ZIP (.zip)."
 
         footer = '''<div>
                       <div align="center">
