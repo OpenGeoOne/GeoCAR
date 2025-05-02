@@ -64,7 +64,7 @@ class preparaCAR_SHP(QgsProcessingAlgorithm):
         return QIcon(os.path.join(os.path.dirname(os.path.dirname(__file__)), 'images/geocar.png'))
 
     def shortHelpString(self):
-        txt = "Prepara camadas do QGIS em Arquivos ShapeFiles (4 arquivos para cada Camada)."
+        txt = "Exporta camadas do QGIS em Arquivos ShapeFile (.shp, .shx, .dbf, .prj)."
 
         footer = '''<div>
                       <div align="center">
