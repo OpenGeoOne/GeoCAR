@@ -70,7 +70,7 @@ class preparaCAR_KML(QgsProcessingAlgorithm):
         return QIcon(os.path.join(os.path.dirname(os.path.dirname(__file__)), 'images/geocar.png'))
 
     def shortHelpString(self):
-        txt = "Prepara camadas do QGIS em KML."
+        txt = "Exporta camadas do QGIS no formato KML para o CAR."
 
         footer = '''<div>
                       <div align="center">
@@ -138,7 +138,7 @@ class preparaCAR_KML(QgsProcessingAlgorithm):
                                 'OUTPUT': 'TEMPORARY_OUTPUT'
                             }
                             c = processing.run('native:reprojectlayer', params_reproj, context=context)['OUTPUT']
-                        
+
                         error = QgsVectorFileWriter.writeAsVectorFormat(
                             c,
                             nomeKML,
@@ -151,7 +151,7 @@ class preparaCAR_KML(QgsProcessingAlgorithm):
                             feedback.pushInfo(self.tr(f'Exportado: {nomeKML}'))
                         else:
                             feedback.reportError(self.tr(f'Erro ao exportar {nomeKML}'))
-                        
+
                         # Apaga os arquivos Shapefile após compactar
                         for f in shapefile_files:
                             try:
