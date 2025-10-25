@@ -34,7 +34,6 @@ from geocar.images.Imgs import *
 
 
 class baixarCAR(QgsProcessingAlgorithm):
-
     INPUT = 'INPUT'
     OUTPUT = 'OUTPUT'
     EXTENT = 'EXTENT'
