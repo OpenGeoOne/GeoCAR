@@ -34,6 +34,7 @@ from .algorithms.baixarCAR import baixarCAR
 from .algorithms.preparaCAR_ZIP import preparaCAR_ZIP
 from .algorithms.preparaCAR_SHP import preparaCAR_SHP
 from .algorithms.preparaCAR_KML import preparaCAR_KML
+from .algorithms.linha_aux_Poligono import linha_aux_Poligono
 
 class GeoCARProvider(QgsProcessingProvider):
     def __init__(self):
@@ -47,6 +48,7 @@ class GeoCARProvider(QgsProcessingProvider):
         self.addAlgorithm(preparaCAR_ZIP())
         self.addAlgorithm(preparaCAR_SHP())
         self.addAlgorithm(preparaCAR_KML())
+        self.addAlgorithm(linha_aux_Poligono())
 
     def id(self):
         return 'GeoCAR'
