@@ -111,7 +111,7 @@ class preparaCAR_ZIP_GO(QgsProcessingAlgorithm):
         for root, dirs, files in os.walk(pasta_entrada):
             for file in files:
                 if file.lower().endswith((".shp", ".shx", ".dbf", ".prj", ".cpg", ".json", ".qmd", ".qpj")):
-                    if not file.startswith("Linha_Auxiliar"):
+                    if 'Linha_Auxiliar' not in file:
                         arquivos_para_zip.append(os.path.join(root, file))
 
         # Cria o ZIP único

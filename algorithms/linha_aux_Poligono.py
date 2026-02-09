@@ -33,21 +33,27 @@ from qgis.PyQt.QtGui import QIcon
 import os
 from geocar.images.Imgs import *
 import processing
-from qgis.core import (QgsProject,
-                       QgsMapLayer,
-                       QgsWkbTypes,
-                       QgsFeature,            
-                       QgsCoordinateTransform, 
-                       QgsProcessing,
-                       QgsProcessingAlgorithm,
-                       QgsProcessingParameterVectorLayer,
-                       QgsProcessingParameterNumber,
-                       QgsProcessingParameterEnum,
-                       QgsProcessingUtils,
-                       QgsProcessingException)
+from qgis.core import (
+    QgsProject,
+    QgsMapLayer,
+    QgsWkbTypes,
+    QgsFeature,
+    QgsCoordinateTransform,
+    QgsProcessing,
+    QgsProcessingAlgorithm,
+    QgsProcessingParameterVectorLayer,
+    QgsProcessingParameterNumber,
+    QgsProcessingParameterEnum,
+    QgsProcessingException,
+    QgsProcessingUtils,
+    QgsCoordinateReferenceSystem
+)
 
 class linha_aux_Poligono(QgsProcessingAlgorithm):
-    OUTPUT_FOLDER = 'OUTPUT_FOLDER'
+    INPUT_LINE = 'INPUT_LINE'
+    BUFFER_WIDTH = 'BUFFER_WIDTH'
+    INPUT_ATI = 'INPUT_ATI'
+    OUTPUT_LIN = 'OUTPUT_LIN'
 
     def tr(self, string):
         return QCoreApplication.translate('Processing', string)
@@ -91,117 +97,110 @@ class linha_aux_Poligono(QgsProcessingAlgorithm):
         return txt + footer
     
     def initAlgorithm(self, config=None):
-        # 1. Camada de Linha (Fonte)
-        self.addParameter(
-            QgsProcessingParameterVectorLayer(
-                'INPUT_LINE',
-                self.tr('Selecione a Linha_Auxiliar'),
-                [QgsProcessing.TypeVectorLine]
-            )
-        )
+        self.addParameter(QgsProcessingParameterVectorLayer(self.INPUT_LINE, self.tr('Selecione a Linha_Auxiliar (4674)'), [QgsProcessing.TypeVectorLine], defaultValue='Linha_Auxiliar'))
+        self.addParameter(QgsProcessingParameterNumber(self.BUFFER_WIDTH, self.tr('Largura total (metros)'), type=QgsProcessingParameterNumber.Double, defaultValue=10.0))
+        self.addParameter(QgsProcessingParameterVectorLayer(self.INPUT_ATI, self.tr('Selecione a camada ATI'), [QgsProcessing.TypeVectorPolygon], defaultValue='ATI'))
 
-        # 2. Largura total
-        self.addParameter(
-            QgsProcessingParameterNumber(
-                'BUFFER_WIDTH',
-                self.tr('Largura total (metros)'),
-                type=QgsProcessingParameterNumber.Double,
-                defaultValue=10.0
-            )
-        )
-
-        # 3. Filtrar camadas RIO no projeto
         camadas_projeto = QgsProject.instance().mapLayers().values()
-        self.camadas_rio = [
-            lyr for lyr in camadas_projeto 
-            if lyr.type() == QgsMapLayer.VectorLayer 
+        self.camadas_saida = [
+            lyr for lyr in camadas_projeto
+            if lyr.type() == QgsMapLayer.VectorLayer
             and lyr.geometryType() == QgsWkbTypes.PolygonGeometry
-            and 'RIO' in lyr.name().upper()
+            and (lyr.name().upper().startswith("RIO") or lyr.name().upper().startswith("SA"))
         ]
-        
-        nomes_rio = [lyr.name() for lyr in self.camadas_rio]
-        if not nomes_rio:
-            nomes_rio = [self.tr('Nenhuma camada RIO encontrada')]
 
-        # 4. Caixa Combo para escolher o destino
-        self.addParameter(
-            QgsProcessingParameterEnum(
-                'DESTINATION_RIO',
-                self.tr('Escolha a camada RIO para receber o polígono'),
-                options=nomes_rio
-            )
-        )
+        nomes_saida = [lyr.name() for lyr in self.camadas_saida]
+        if not nomes_saida:
+            nomes_saida = [self.tr('Nenhuma camada RIO/SA encontrada')]
+
+        self.addParameter(QgsProcessingParameterEnum(self.OUTPUT_LIN, self.tr('Escolha a camada destino (RIO/SA)'), options=nomes_saida))
 
     def processAlgorithm(self, parameters, context, feedback):
-        # 1. Recuperar parâmetros
-        source_layer = self.parameterAsVectorLayer(parameters, 'INPUT_LINE', context)
-        width = self.parameterAsDouble(parameters, 'BUFFER_WIDTH', context)
-        buffer_distance = width / 2.0
+        line_lyr = self.parameterAsVectorLayer(parameters, self.INPUT_LINE, context)
+        ati_lyr = self.parameterAsVectorLayer(parameters, self.INPUT_ATI, context)
+        width = self.parameterAsDouble(parameters, self.BUFFER_WIDTH, context)
         
-        # Recuperar a camada RIO de destino do Enum
-        idx = self.parameterAsEnum(parameters, 'DESTINATION_RIO', context)
-        if not hasattr(self, 'camadas_rio') or not self.camadas_rio:
-            raise QgsProcessingException('Nenhuma camada RIO disponível no projeto.')
-        dest_layer = self.camadas_rio[idx]
+        idx = self.parameterAsEnum(parameters, self.OUTPUT_LIN, context)
+        if not self.camadas_saida:
+            raise QgsProcessingException("Nenhuma camada de destino selecionada.")
+        dest_layer = self.camadas_saida[idx]
 
-        if feedback.isCanceled():
-            return {}
+        if feedback.isCanceled(): return {}
 
-        # 2. DISSOLVE (Garante feição única)
-        feedback.pushInfo('Consolidando linha original...')
-        dissolve_results = processing.run(
-            "native:dissolve",
-            {'INPUT': source_layer, 'OUTPUT': 'memory:dissolvida'},
-            context=context, feedback=feedback, is_child_algorithm=True
-        )
-
-        # 3. BUFFER (Cria a camada temporária "Bordeada")
-        feedback.pushInfo('Gerando geometria Bordeada...')
-        buffer_results = processing.run(
-            "native:buffer",
-            {
-                'INPUT': dissolve_results['OUTPUT'],
-                'DISTANCE': buffer_distance,
-                'END_CAP_STYLE': 1, # Flat
-                'JOIN_STYLE': 0,
-                'DISSOLVE': True,
-                'OUTPUT': 'memory:Bordeada'
-            },
-            context=context, feedback=feedback, is_child_algorithm=True
-        )
-
-        # 4. COPIAR E COLAR COM COMPATIBILIDADE DE SRC
-        bordeada_layer = QgsProcessingUtils.mapLayerFromString(buffer_results['OUTPUT'], context)
+        # --- PASSO 1: DETECTAR FUSO UTM PARA BUFFER PRECISO ---
+        extent = line_lyr.extent()
+        center_x = (extent.xMinimum() + extent.xMaximum()) / 2
+        center_y = (extent.yMinimum() + extent.yMaximum()) / 2
+        utm_zone = int((center_x + 180) / 6) + 1
+        epsg_utm = 32700 + utm_zone if center_y < 0 else 32600 + utm_zone
+        target_crs = f"EPSG:{epsg_utm}"
         
-        if dest_layer and bordeada_layer:
+        feedback.pushInfo(f"Fuso detectado: {target_crs}. Reprojetando para Buffer...")
+
+        # --- PASSO 2: REPROJETAR -> DISSOLVE -> BUFFER (Em Metros) ---
+        reprojected = processing.run("native:reprojectlayer", {
+            'INPUT': line_lyr, 'TARGET_CRS': target_crs, 'OUTPUT': 'memory:'
+        }, context=context, feedback=feedback, is_child_algorithm=True)['OUTPUT']
+
+        dissolved = processing.run("native:dissolve", {
+            'INPUT': reprojected, 'OUTPUT': 'memory:'
+        }, context=context, feedback=feedback, is_child_algorithm=True)['OUTPUT']
+
+        buffered = processing.run("native:buffer", {
+            'INPUT': dissolved,
+            'DISTANCE': width / 2,
+            'END_CAP_STYLE': 1, # Flat
+            'DISSOLVE': True,
+            'OUTPUT': 'memory:'
+        }, context=context, feedback=feedback, is_child_algorithm=True)['OUTPUT']
+
+        # --- PASSO 3: VOLTAR PARA 4674 E INTERSECCIONAR ---
+        buffer_4674 = processing.run("native:reprojectlayer", {
+            'INPUT': buffered, 'TARGET_CRS': 'EPSG:4674', 'OUTPUT': 'memory:'
+        }, context=context, feedback=feedback, is_child_algorithm=True)['OUTPUT']
+
+        intersected = processing.run("native:intersection", {
+            'INPUT': buffer_4674, 'OVERLAY': ati_lyr, 'OUTPUT': 'memory:'
+        }, context=context, feedback=feedback, is_child_algorithm=True)['OUTPUT']
+
+        # --- PASSO 4: LIMPEZA FINAL ---
+        try:
+            cleaned = processing.run("native:fixgeometries", {'INPUT': intersected, 'OUTPUT': 'memory:'}, context=context, feedback=feedback, is_child_algorithm=True)['OUTPUT']
+        except:
+            cleaned = intersected
+
+        final_vlayer = QgsProcessingUtils.mapLayerFromString(cleaned, context)
+
+        # --- PASSO 5: INJETAR NA CAMADA DE DESTINO ---
+        if not dest_layer.isEditable():
             dest_layer.startEditing()
-            
-            # Preparar transformação de coordenadas caso os sistemas sejam diferentes
-            # Isso impede que o polígono seja colado no lugar errado
-            transform = QgsCoordinateTransform(bordeada_layer.crs(), dest_layer.crs(), QgsProject.instance())
-            
-            feicoes_adicionadas = 0
-            for feat in bordeada_layer.getFeatures():
-                # Criar uma nova feicao baseada na Bordeada
-                nova_feicao = QgsFeature(feat)
-                
-                # Transformar a geometria para o SRC da camada destino (RIO)
-                geom = nova_feicao.geometry()
-                geom.transform(transform)
-                nova_feicao.setGeometry(geom)
-                
-                # Tentar adicionar à camada destino
-                if dest_layer.addFeature(nova_feicao):
-                    feicoes_adicionadas += 1
-            
-            dest_layer.commitChanges()
-            
-            # Atualizar a visualização
-            dest_layer.updateExtents()
-            dest_layer.triggerRepaint()
-            
-            feedback.pushInfo(f'Sucesso! {feicoes_adicionadas} polígono(s) colado(s) em {dest_layer.name()}.')
-        else:
-            raise QgsProcessingException('Erro ao processar as camadas internas.')
+        
+        # Transformação de coordenadas
+        xform = QgsCoordinateTransform(final_vlayer.crs(), dest_layer.crs(), QgsProject.instance())
+        
+        novas_feicoes = []
+        for feat in final_vlayer.getFeatures():
+            # Criamos a feição com os campos da camada de destino para evitar erro de esquema
+            new_feat = QgsFeature(dest_layer.fields()) 
+            geom = feat.geometry()
+            geom.transform(xform)
+            new_feat.setGeometry(geom)
+            novas_feicoes.append(new_feat)
 
-        return {'STATUS': 'Concluído'}
+        # Adiciona as feições
+        if novas_feicoes:
+            dest_layer.addFeatures(novas_feicoes)
+            success = dest_layer.commitChanges()
+            
+            if not success:
+                feedback.reportError(f"Erro ao salvar: {dest_layer.commitErrors()}")
+        
+        # --- ATUALIZAÇÃO SEGURA (SEM MAPCANVAS) ---
+        dest_layer.updateExtents()
+        
+        # O triggerRepaint avisa ao QGIS para redesenhar a camada onde quer que ela esteja
+        dest_layer.triggerRepaint() 
+        
+        feedback.pushInfo(f"Sucesso! {len(novas_feicoes)} feição(ões) adicionada(s) em {dest_layer.name()}.")
+        
+        return {self.OUTPUT_LIN: dest_layer.id()}
