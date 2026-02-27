@@ -36,6 +36,7 @@ from .algorithms.preparaCAR_ZIP_GO import preparaCAR_ZIP_GO
 from .algorithms.preparaCAR_SHP import preparaCAR_SHP
 from .algorithms.preparaCAR_KML import preparaCAR_KML
 from .algorithms.linha_aux_Poligono import linha_aux_Poligono
+from .algorithms.altitude_1800_Declividade_45 import altitude_1800_Declividade_45
 
 class GeoCARProvider(QgsProcessingProvider):
     def __init__(self):
@@ -51,6 +52,7 @@ class GeoCARProvider(QgsProcessingProvider):
         self.addAlgorithm(preparaCAR_SHP())
         self.addAlgorithm(preparaCAR_KML())
         self.addAlgorithm(linha_aux_Poligono())
+        self.addAlgorithm(altitude_1800_Declividade_45())
 
     def id(self):
         return 'GeoCAR'
