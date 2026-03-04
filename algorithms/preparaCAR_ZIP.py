@@ -53,7 +53,7 @@ class preparaCAR_ZIP(QgsProcessingAlgorithm):
         return 'preparaCAR_ZIP'
 
     def displayName(self):
-        return self.tr('Prepara Zip para o CAR')
+        return self.tr('4. Gerar Zip para o CAR')
 
     def group(self):
         return self.tr(self.groupId())
@@ -65,7 +65,16 @@ class preparaCAR_ZIP(QgsProcessingAlgorithm):
         return QIcon(os.path.join(os.path.dirname(os.path.dirname(__file__)), 'images/geocar.png'))
 
     def shortHelpString(self):
-        txt = "Exporta camadas do QGIS em Arquivos Shapefile compactados no formato ZIP (.zip)."
+        txt = """Exporta automaticamente as camadas vetoriais do projeto para <b>Shapefile</b> e compacta cada uma em arquivos <b>.ZIP</b>, no formato utilizado para importação no <b>Aplicativo do Cadastro Ambiental Rural (CAR)</b>.
+
+A ferramenta percorre todas as camadas vetoriais do projeto e exporta apenas aquelas que possuem feições, gerando um arquivo ZIP para cada camada.
+
+<b>Parâmetro principal:</b>
+• Pasta de destino – diretório onde os arquivos ZIP serão gravados.
+
+<b>Resultado:</b>
+São gerados arquivos <b>.ZIP</b> contendo os componentes do Shapefile (.shp, .shx, .dbf, .prj, .cpg), prontos para envio ao sistema do CAR.
+"""
 
         footer = '''<div>
                       <div align="center">
@@ -73,10 +82,10 @@ class preparaCAR_ZIP(QgsProcessingAlgorithm):
                       </div>
                       <div align="right">
                       <p align="right">
-                      <a href="https://geoone.com.br/pvcar2/"><span style="font-weight: bold;">Conheça o curso de Cadastro Ambiental Rural (CAR)</span></a>
+                      <a href="https://geoone.com.br/pvcar/"><span style="font-weight: bold;">Conheça o curso de Cadastro Ambiental Rural (CAR)</span></a>
                       </p>
                       <p align="right">
-                      <a href="https://portal.geoone.com.br/m/lessons/car"><span style="font-weight: bold;">Acesse seu curso na GeoOne</span></a>
+                      <a href="https://portal.geoone.com.br/m/lessons/car"><span style="font-weight: bold;">Acesse a aula sobre esta ferramenta no curso de CAR da GeoOne</span></a>
                       </p>
                       <a target="_blank" rel="noopener noreferrer" href="https://geoone.com.br/"><img title="GeoOne" src="data:image/png;base64,'''+ GeoOne +'''"></a>
                       <p><i>"Mapeamento automatizado, fácil e direto ao ponto é na GeoOne!"</i></p>
