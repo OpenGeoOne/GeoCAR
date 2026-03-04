@@ -176,7 +176,7 @@ class baixarCAR(QgsProcessingAlgorithm):
         return 'baixarcar'
 
     def displayName(self):
-        return self.tr('Consulta CAR')
+        return self.tr('1. Consulta CAR')
 
     def group(self):
         return self.tr(self.groupId())
@@ -194,7 +194,17 @@ class baixarCAR(QgsProcessingAlgorithm):
         return QIcon(os.path.join(os.path.dirname(os.path.dirname(__file__)), 'images/geocar.png'))
 
     def shortHelpString(self):
-        txt = 'Baixa camadas do CAR a partir de uma extensão (retângulo).' 
+        txt = """Realiza a consulta de imóveis do <b>Cadastro Ambiental Rural (CAR)</b> a partir de um <b>retângulo de extensão</b> definido no mapa.
+A ferramenta acessa automaticamente os serviços <b>WFS do SICAR</b> ou a base <b>GeoOne</b> e baixa os imóveis CAR presentes na área selecionada.
+<b>Parâmetros principais:</b>
+• Retângulo de Extensão – área de consulta no mapa  
+• Camada – tipo de dado CAR a consultar  
+• Consultar base da GeoOne – utiliza o servidor GeoOne em vez do SICAR oficial
+<b>Resultado:</b>
+Os imóveis CAR encontrados na área selecionada são carregados como uma nova camada vetorial no projeto QGIS.
+<b>Observação:</b>
+A área de consulta deve ser pequena (até aproximadamente 1°) para garantir desempenho adequado na consulta WFS.
+"""
 
         footer = '''<div>
                       <div align="center">
@@ -202,10 +212,10 @@ class baixarCAR(QgsProcessingAlgorithm):
                       </div>
                       <div align="right">
                       <p align="right">
-                      <a href="https://geoone.com.br/pvcar2/"><span style="font-weight: bold;">Conheça o curso de Cadastro Ambiental Rural (CAR)</span></a>
+                      <a href="https://geoone.com.br/pvcar/"><span style="font-weight: bold;">Conheça o curso de Cadastro Ambiental Rural (CAR)</span></a>
                       </p>
                       <p align="right">
-                      <a href="https://portal.geoone.com.br/m/lessons/car"><span style="font-weight: bold;">Acesse seu curso na GeoOne</span></a>
+                      <a href="https://portal.geoone.com.br/m/lessons/car"><span style="font-weight: bold;">Acesse a aula sobre esta ferramenta no curso de CAR da GeoOne</span></a>
                       </p>
                       <a target="_blank" rel="noopener noreferrer" href="https://geoone.com.br/"><img title="GeoOne" src="data:image/png;base64,'''+ GeoOne +'''"></a>
                       <p><i>"Mapeamento automatizado, fácil e direto ao ponto é na GeoOne!"</i></p>
