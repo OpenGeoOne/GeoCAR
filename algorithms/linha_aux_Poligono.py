@@ -65,7 +65,7 @@ class linha_aux_Poligono(QgsProcessingAlgorithm):
         return 'linha_aux_Poligono'
 
     def displayName(self):
-        return self.tr('Linha Auxiliar para Polígono')
+        return self.tr('3. Linha Auxiliar para Polígono')
 
     def group(self):
         return self.tr(self.groupId())
@@ -77,7 +77,14 @@ class linha_aux_Poligono(QgsProcessingAlgorithm):
         return QIcon(os.path.join(os.path.dirname(os.path.dirname(__file__)), 'images/geocar.png'))
 
     def shortHelpString(self):
-        txt = "Transforma Linha_Auxiliar em Polígono - caso de Rios, Estradas, Canais, etc. Quando necessário (caso de Goiás)"
+        txt = """Converte uma camada de <b>Linha_Auxiliar</b> em um polígono com largura definida pelo usuário, útil para representar elementos lineares que possuem largura real no terreno, como <b>rios, estradas ou canais</b>.
+O algoritmo gera um buffer a partir da linha, reprojeta automaticamente para UTM para garantir a largura em metros, intersecta com a camada <b>ATI</b> e adiciona o polígono resultante diretamente na camada de destino (<b>RIO ou SA</b>).
+<b>Parâmetros principais:</b>
+• Linha_Auxiliar – camada de linhas de entrada  
+• Largura total (m) – largura do elemento no terreno 
+• ATI – Área Total do Imóvel
+• Camada destino – camada poligonal que receberá as feições
+"""
 
         footer = '''<div>
                       <div align="center">
@@ -85,10 +92,10 @@ class linha_aux_Poligono(QgsProcessingAlgorithm):
                       </div>
                       <div align="right">
                       <p align="right">
-                      <a href="https://geoone.com.br/pvcar2/"><span style="font-weight: bold;">Conheça o curso de Cadastro Ambiental Rural (CAR)</span></a>
+                      <a href="https://geoone.com.br/pvcar/"><span style="font-weight: bold;">Conheça o curso de Cadastro Ambiental Rural (CAR)</span></a>
                       </p>
                       <p align="right">
-                      <a href="https://portal.geoone.com.br/m/lessons/car"><span style="font-weight: bold;">Acesse seu curso na GeoOne</span></a>
+                      <a href="https://portal.geoone.com.br/m/lessons/car"><span style="font-weight: bold;">Acesse a aula sobre esta ferramenta no curso de CAR da GeoOne</span></a>
                       </p>
                       <a target="_blank" rel="noopener noreferrer" href="https://geoone.com.br/"><img title="GeoOne" src="data:image/png;base64,'''+ GeoOne +'''"></a>
                       <p><i>"Mapeamento automatizado, fácil e direto ao ponto é na GeoOne!"</i></p>
