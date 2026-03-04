@@ -58,7 +58,7 @@ class preparaCAR_KML(QgsProcessingAlgorithm):
         return 'preparaCAR_KML'
 
     def displayName(self):
-        return self.tr('Gera Arquivo(s) KML')
+        return self.tr('7. Gerar Arquivo(s) KML')
 
     def group(self):
         return self.tr(self.groupId())
@@ -70,7 +70,14 @@ class preparaCAR_KML(QgsProcessingAlgorithm):
         return QIcon(os.path.join(os.path.dirname(os.path.dirname(__file__)), 'images/geocar.png'))
 
     def shortHelpString(self):
-        txt = "Exporta camadas do QGIS no formato KML para o CAR."
+        txt = """Exporta automaticamente as camadas vetoriais do projeto para arquivos <b>KML</b>, permitindo visualizar os dados do <b>Cadastro Ambiental Rural (CAR)</b> no <b>Google Earth</b>
+ou em outros aplicativos compatíveis.
+A ferramenta percorre todas as camadas vetoriais do projeto e exporta apenas aquelas que possuem feições.
+<b>Parâmetro principal:</b>
+• Pasta de destino – diretório onde os arquivos KML serão gravados.
+<b>Resultado:</b>
+Para cada camada exportada é gerado um arquivo <b>.kml</b>, reprojetado automaticamente para <b>WGS84</b> (EPSG:4326).
+"""
 
         footer = '''<div>
                       <div align="center">
@@ -78,10 +85,10 @@ class preparaCAR_KML(QgsProcessingAlgorithm):
                       </div>
                       <div align="right">
                       <p align="right">
-                      <a href="https://geoone.com.br/pvcar2/"><span style="font-weight: bold;">Conheça o curso de Cadastro Ambiental Rural (CAR)</span></a>
+                      <a href="https://geoone.com.br/pvcar/"><span style="font-weight: bold;">Conheça o curso de Cadastro Ambiental Rural (CAR)</span></a>
                       </p>
                       <p align="right">
-                      <a href="https://portal.geoone.com.br/m/lessons/car"><span style="font-weight: bold;">Acesse seu curso na GeoOne</span></a>
+                      <a href="https://portal.geoone.com.br/m/lessons/car?classId=6082"><span style="font-weight: bold;">Acesse a aula sobre esta ferramenta no curso de CAR da GeoOne</span></a>
                       </p>
                       <a target="_blank" rel="noopener noreferrer" href="https://geoone.com.br/"><img title="GeoOne" src="data:image/png;base64,'''+ GeoOne +'''"></a>
                       <p><i>"Mapeamento automatizado, fácil e direto ao ponto é na GeoOne!"</i></p>
