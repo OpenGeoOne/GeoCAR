@@ -5,12 +5,12 @@
 [general]
 name=GeoCAR
 qgisMinimumVersion=3.10
-description=Cadastro Ambiental Rural
+description=Ferramentas para preparação, análise e exportação de dados do Cadastro Ambiental Rural (CAR) no QGIS | Tools for preparing, analyzing and exporting Brazilian Rural Environmental Registry (CAR) data in QGIS
 version=1.2
 author=Prof Cazaroli, Leandro França
 email=suporte@geoone.com.br
 
-about=Ferramentas para cadastro ambiental de imóveis rurais conforme normas técnicas do Sistema Nacional de Cadastro Ambiental Rural (Sicar).
+about=[PT-BR] O GeoCAR é um plugin para QGIS que auxilia na preparação e organização de dados para o Cadastro Ambiental Rural (CAR) no Brasil. O plugin inclui ferramentas para consulta de imóveis do SICAR, identificação de áreas de preservação permanente (APP) por altitude e declividade, conversão de linhas auxiliares em polígonos, e exportação automática de camadas nos formatos exigidos pelo sistema do CAR (SHP, ZIP e KML). Também inclui rotinas específicas para fluxos estaduais, como o envio em ZIP único utilizado no estado de Goiás. O objetivo é automatizar tarefas repetitivas e facilitar o fluxo de trabalho de profissionais que atuam com regularização ambiental e cadastro de imóveis rurais. [EN] GeoCAR is a QGIS plugin designed to assist in preparing and organizing spatial data for the Brazilian Rural Environmental Registry (CAR). The plugin provides tools to query SICAR property data, identify protected areas based on elevation and slope thresholds, convert auxiliary lines into polygons, and export layers in formats required by the CAR system (SHP, ZIP, and KML). It also includes specific workflows for certain states, such as the single ZIP submission required in Goiás. GeoCAR aims to automate repetitive tasks and streamline workflows for professionals working with environmental land registration and rural property mapping.
 
 tracker=https://github.com/OpenGeoOne/GeoCAR/issues
 repository=https://github.com/OpenGeoOne/GeoCAR
