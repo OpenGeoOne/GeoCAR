@@ -360,7 +360,7 @@ class altitude_1800_Declividade_45(QgsProcessingAlgorithm):
         return 'altitude_1800_Declividade_45'
 
     def displayName(self):
-        return 'Altitude > 1800 m e Declividade > 45°'
+        return '2. Altitude > 1800 m e Declividade > 45°'
 
     def group(self):
         return self.tr(self.groupId())
@@ -378,7 +378,23 @@ class altitude_1800_Declividade_45(QgsProcessingAlgorithm):
         return QIcon(os.path.join(os.path.dirname(os.path.dirname(__file__)), 'images/geocar.png'))
 
     def shortHelpString(self):
-        txt = 'Mostra área com altitude maior que 1800 m e declividade maior que 45°.' 
+        txt = """Identifica áreas com <b>altitude superior a 1800 m</b> e/ou <b>declividade maior que 45°</b> a partir de um Modelo Digital do Terreno (MDT).
+
+A ferramenta calcula automaticamente a declividade do MDT, classifica os valores acima dos limites definidos e gera polígonos recortados pela <b>área do imóvel</b>, permitindo delimitar regiões que podem corresponder a <b>Áreas de Preservação Permanente (APP)</b>.
+
+<b>Parâmetros principais:</b>
+• MDT – raster do Modelo Digital do Terreno  
+• Área do imóvel – limite utilizado para recorte da análise  
+• SRC (projetado) – sistema de coordenadas em metros (ex.: UTM)
+
+<b>Resultado:</b>
+São geradas duas camadas vetoriais:
+• <b>Área acima de 1800 m</b>  
+• <b>Declividade acima de 45°</b>
+
+<b>Observação:</b>
+O processamento requer um <b>SRC projetado</b> (ex.: UTM) e o plugin <b>LFTools</b> instalado no QGIS.
+"""
 
         footer = '''<div>
                       <div align="center">
@@ -386,10 +402,10 @@ class altitude_1800_Declividade_45(QgsProcessingAlgorithm):
                       </div>
                       <div align="right">
                       <p align="right">
-                      <a href="https://geoone.com.br/pvcar2/"><span style="font-weight: bold;">Conheça o curso de Cadastro Ambiental Rural (CAR)</span></a>
+                      <a href="https://geoone.com.br/pvcar/"><span style="font-weight: bold;">Conheça o curso de Cadastro Ambiental Rural (CAR)</span></a>
                       </p>
                       <p align="right">
-                      <a href="https://portal.geoone.com.br/m/lessons/car"><span style="font-weight: bold;">Acesse seu curso na GeoOne</span></a>
+                      <a href="https://portal.geoone.com.br/m/lessons/car"><span style="font-weight: bold;">Acesse a aula sobre esta ferramenta no curso de CAR da GeoOne</span></a>
                       </p>
                       <a target="_blank" rel="noopener noreferrer" href="https://geoone.com.br/"><img title="GeoOne" src="data:image/png;base64,'''+ GeoOne +'''"></a>
                       <p><i>"Mapeamento automatizado, fácil e direto ao ponto é na GeoOne!"</i></p>
