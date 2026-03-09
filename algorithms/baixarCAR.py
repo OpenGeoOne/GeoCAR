@@ -189,6 +189,9 @@ class baixarCAR(QgsProcessingAlgorithm):
 
     def createInstance(self):
         return baixarCAR()
+    
+    def tags(self):
+        return 'GeoOne,GeoCAR,GeoRural,ambiental,APP,SiCAR,baixar,download,imóvel'.split(',')
 
     def icon(self):
         return QIcon(os.path.join(os.path.dirname(os.path.dirname(__file__)), 'images/geocar.png'))
