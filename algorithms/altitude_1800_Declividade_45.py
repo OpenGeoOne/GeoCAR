@@ -374,6 +374,9 @@ class altitude_1800_Declividade_45(QgsProcessingAlgorithm):
     def createInstance(self):
         return altitude_1800_Declividade_45()
     
+    def tags(self):
+        return 'GeoOne,GeoCAR,GeoRural,ambiental,APP,SiCAR,slope,inclinação,rampa,altura,elevação,MDE,MDT'.split(',')
+    
     def icon(self):
         return QIcon(os.path.join(os.path.dirname(os.path.dirname(__file__)), 'images/geocar.png'))
 
