@@ -55,6 +55,9 @@ class preparaCAR_ZIP_GO(QgsProcessingAlgorithm):
 
     def groupId(self):
         return ''
+    
+    def tags(self):
+        return 'GeoOne,GeoCAR,GeoRural,ambiental,APP,SiCAR,Goias,Goiania,Cerrado,SIGCAR,murundus,compactar,ZIP'.split(',')
 
     def icon(self):
         return QIcon(os.path.join(os.path.dirname(os.path.dirname(__file__)), 'images/geocar.png'))
