@@ -65,6 +65,9 @@ class preparaCAR_KML(QgsProcessingAlgorithm):
 
     def groupId(self):
         return ''
+    
+    def tags(self):
+        return 'GeoOne,GeoCAR,GeoRural,ambiental,APP,SiCAR,KML,KMZ,Google,Earth'.split(',')
 
     def icon(self):
         return QIcon(os.path.join(os.path.dirname(os.path.dirname(__file__)), 'images/geocar.png'))
