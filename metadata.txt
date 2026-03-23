@@ -4,7 +4,8 @@
 
 [general]
 name=GeoCAR
-qgisMinimumVersion=3.10
+qgisMinimumVersion=3.40
+qgisMaximumVersion=4.99
 description=Ferramentas para preparação, análise e exportação de dados do Cadastro Ambiental Rural (CAR) no QGIS | Tools for preparing, analyzing and exporting Brazilian Rural Environmental Registry (CAR) data in QGIS
 version=1.2.1
 author=Prof Cazaroli, Leandro França
