@@ -7,7 +7,7 @@ name=GeoCAR
 qgisMinimumVersion=3.40
 qgisMaximumVersion=4.99
 description=Ferramentas para preparação, análise e exportação de dados do Cadastro Ambiental Rural (CAR) no QGIS | Tools for preparing, analyzing and exporting Brazilian Rural Environmental Registry (CAR) data in QGIS
-version=1.2.1
+version=1.2.2
 author=Prof Cazaroli, Leandro França
 email=suporte@geoone.com.br
 
@@ -22,6 +22,7 @@ repository=https://github.com/OpenGeoOne/GeoCAR
 hasProcessingProvider=yes
 # Uncomment the following line and add your changelog:
 # changelog=
+  1.2.2: Updated for compatibility with QGIS 4.0
   1.2.1: Added tags to tools to make functionalities easier to find
   1.2: Auxiliary Line for Polygon; ZIP único para GO; Áreas com mais de 1800 m e declividade maior que 45 graus
   1.1: Compatibility with Qt5 and Qt6
