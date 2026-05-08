@@ -26,6 +26,8 @@ __author__ = 'Prof Cazaroli e Leandro França'
 __date__ = '2026-02-27'
 __copyright__ = '(C) 2026 by Prof Cazaroli e Leandro França'
 
+# -*- coding: utf-8 -*-
+
 from qgis.PyQt.QtCore import QCoreApplication
 from qgis.core import *
 from qgis import processing
@@ -33,7 +35,7 @@ from qgis.PyQt.QtGui import QIcon, QColor
 from geocar.images.Imgs import *
 import os
 
-class altitude_1800_Declividade_45(QgsProcessingAlgorithm):
+class declividade_25_45(QgsProcessingAlgorithm):
     def initAlgorithm(self, config=None):
         self.addParameter(QgsProcessingParameterRasterLayer('mdt', 'MDT', defaultValue=None))
         self.addParameter(
@@ -49,17 +51,8 @@ class altitude_1800_Declividade_45(QgsProcessingAlgorithm):
 
         self.addParameter(
             QgsProcessingParameterFeatureSink(
-                'ReaAcimaDe1800m',
-                'Área acima de 1800 m',
-                type=QgsProcessing.TypeVectorAnyGeometry,
-                createByDefault=True,
-                defaultValue=None
-            )
-        )
-        self.addParameter(
-            QgsProcessingParameterFeatureSink(
-                'DeclividadeAcimaDe45',
-                'Declividade acima de 45°',
+                'Declividade2545',
+                'Declividade entre 25° e 45°',
                 type=QgsProcessing.TypeVectorAnyGeometry,
                 createByDefault=True,
                 defaultValue=None
@@ -91,19 +84,20 @@ class altitude_1800_Declividade_45(QgsProcessingAlgorithm):
             )
 
     def processAlgorithm(self, parameters, context, model_feedback):
-        feedback = QgsProcessingMultiStepFeedback(10, model_feedback)
+        feedback = QgsProcessingMultiStepFeedback(6, model_feedback)
         results = {}
         outputs = {}
 
-        # --- Validação 1: LFTools instalado ---
+        # -------------------------
+        # Validações
+        # -------------------------
         self._check_lftools_installed()
 
-        # --- Validação 2: CRS projetado ---
         target_crs = self.parameterAsCrs(parameters, 'src', context)
         self._check_projected_crs(target_crs)
 
         # -------------------------
-        # 1) Reprojetar coordenadas (raster MDT)
+        # Reprojetar MDT
         # -------------------------
         alg_params = {
             'DATA_TYPE': 0,
@@ -112,7 +106,7 @@ class altitude_1800_Declividade_45(QgsProcessingAlgorithm):
             'MULTITHREADING': False,
             'NODATA': None,
             'OPTIONS': None,
-            'RESAMPLING': 2,  # Cúbico
+            'RESAMPLING': 2,
             'SOURCE_CRS': None,
             'TARGET_CRS': target_crs,
             'TARGET_EXTENT': None,
@@ -120,6 +114,7 @@ class altitude_1800_Declividade_45(QgsProcessingAlgorithm):
             'TARGET_RESOLUTION': None,
             'OUTPUT': QgsProcessing.TEMPORARY_OUTPUT
         }
+
         outputs['ReprojetarCoordenadas'] = processing.run(
             'gdal:warpreproject',
             alg_params,
@@ -133,19 +128,16 @@ class altitude_1800_Declividade_45(QgsProcessingAlgorithm):
             return {}
 
         # -------------------------
-        # 2) Limiarização Binária (ALTITUDE >= 1800)
-        # IMPORTANTE: usar o raster reprojetado
+        # Declividade
         # -------------------------
         alg_params = {
-            'METHOD': 3,
-            'OPEN': False,
-            'RasterIN': outputs['ReprojetarCoordenadas']['OUTPUT'],
-            'SAMPLES': None,
-            'VALUES': '1800,6000',
-            'RasterOUT': QgsProcessing.TEMPORARY_OUTPUT
+            'INPUT': outputs['ReprojetarCoordenadas']['OUTPUT'],
+            'Z_FACTOR': 1,
+            'OUTPUT': QgsProcessing.TEMPORARY_OUTPUT
         }
-        outputs['LimiarizacaoBinaria'] = processing.run(
-            'lftools:binarythresholding',
+
+        outputs['Declividade'] = processing.run(
+            'native:slope',
             alg_params,
             context=context,
             feedback=feedback,
@@ -157,37 +149,42 @@ class altitude_1800_Declividade_45(QgsProcessingAlgorithm):
             return {}
 
         # -------------------------
-        # 3) Declividade (slope)
+        # Raster Calculator
+        # Declividade entre 25 e 45 graus
         # -------------------------
+
         alg_params = {
-            'INPUT': outputs['ReprojetarCoordenadas']['OUTPUT'],
-            'Z_FACTOR': 1,
+            'INPUT_A': outputs['Declividade']['OUTPUT'],
+            'BAND_A': 1,
+            'FORMULA': '(A>=25)*(A<=45)',
+            'NO_DATA': 0,
+            'RTYPE': 5,
+            'OPTIONS': '',
+            'EXTRA': '',
             'OUTPUT': QgsProcessing.TEMPORARY_OUTPUT
         }
-        outputs['Declividade'] = processing.run(
-            'native:slope',
+
+        outputs['FaixaDeclividade'] = processing.run(
+            'gdal:rastercalculator',
             alg_params,
             context=context,
             feedback=feedback,
             is_child_algorithm=True
         )
 
-        feedback.setCurrentStep(3)
-        if feedback.isCanceled():
-            return {}
-
         # -------------------------
-        # 4) Raster para vetor (poligonizar) - ALTITUDE
+        # Polygonize
         # -------------------------
         alg_params = {
             'BAND': 1,
             'EIGHT_CONNECTEDNESS': False,
             'EXTRA': None,
             'FIELD': 'DN',
-            'INPUT': outputs['LimiarizacaoBinaria']['RasterOUT'],
+            'INPUT': outputs['FaixaDeclividade']['OUTPUT'],
             'OUTPUT': QgsProcessing.TEMPORARY_OUTPUT
         }
-        outputs['PolygonizeAlt'] = processing.run(
+
+        outputs['PolygonizeSlope'] = processing.run(
             'gdal:polygonize',
             alg_params,
             context=context,
@@ -200,16 +197,17 @@ class altitude_1800_Declividade_45(QgsProcessingAlgorithm):
             return {}
 
         # -------------------------
-        # 5) Extrair por atributo (DN = 1)
+        # Extrair DN = 1
         # -------------------------
         alg_params = {
             'FIELD': 'DN',
-            'INPUT': outputs['PolygonizeAlt']['OUTPUT'],
+            'INPUT': outputs['PolygonizeSlope']['OUTPUT'],
             'OPERATOR': 0,
             'VALUE': '1',
             'OUTPUT': QgsProcessing.TEMPORARY_OUTPUT
         }
-        outputs['ExtractAlt'] = processing.run(
+
+        outputs['ExtractSlope'] = processing.run(
             'native:extractbyattribute',
             alg_params,
             context=context,
@@ -222,122 +220,26 @@ class altitude_1800_Declividade_45(QgsProcessingAlgorithm):
             return {}
 
         # -------------------------
-        # 6) Recortar pela área do imóvel - ALTITUDE
+        # Clip na área do imóvel
         # -------------------------
-        out_param_alt = parameters['ReaAcimaDe1800m']
-        
-        # Verifica se já é uma definição de camada, se não, cria uma
-        if not isinstance(out_param_alt, QgsProcessingOutputLayerDefinition):
-            output_alt = QgsProcessingOutputLayerDefinition(out_param_alt, context.project())
-        else:
-            output_alt = out_param_alt
-            
-        # Define o nome que aparecerá na legenda
-        output_alt.destinationName = 'Area_1800m'
+        out_param_slope = parameters['Declividade25a45']
 
-        alg_params = {
-            'INPUT': outputs['ExtractAlt']['OUTPUT'],
-            'OVERLAY': parameters['area_do_imovel'],
-            'OUTPUT': output_alt
-        }
-        outputs['ClipAlt'] = processing.run(
-            'native:clip',
-            alg_params,
-            context=context,
-            feedback=feedback,
-            is_child_algorithm=True
-        )
-        results['ReaAcimaDe1800m'] = outputs['ClipAlt']['OUTPUT']
-
-        feedback.setCurrentStep(6)
-        if feedback.isCanceled():
-            return {}
-
-        # -------------------------
-        # 7) Limiarização Binária (DECLIVIDADE >= 45)
-        # -------------------------
-        alg_params = {
-            'METHOD': 3,
-            'OPEN': False,
-            'RasterIN': outputs['Declividade']['OUTPUT'],
-            'SAMPLES': None,
-            'VALUES': '45,90',
-            'RasterOUT': QgsProcessing.TEMPORARY_OUTPUT
-        }
-        outputs['LimiarizacaoBinaria_2'] = processing.run(
-            'lftools:binarythresholding',
-            alg_params,
-            context=context,
-            feedback=feedback,
-            is_child_algorithm=True
-        )
-
-        feedback.setCurrentStep(7)
-        if feedback.isCanceled():
-            return {}
-
-        # -------------------------
-        # 8) Polygonize - DECLIVIDADE
-        # -------------------------
-        alg_params = {
-            'BAND': 1,
-            'EIGHT_CONNECTEDNESS': False,
-            'EXTRA': None,
-            'FIELD': 'DN',
-            'INPUT': outputs['LimiarizacaoBinaria_2']['RasterOUT'],
-            'OUTPUT': QgsProcessing.TEMPORARY_OUTPUT
-        }
-        outputs['PolygonizeSlope'] = processing.run(
-            'gdal:polygonize',
-            alg_params,
-            context=context,
-            feedback=feedback,
-            is_child_algorithm=True
-        )
-
-        feedback.setCurrentStep(8)
-        if feedback.isCanceled():
-            return {}
-
-        # -------------------------
-        # 9) Extrair por atributo (DN = 1)
-        # -------------------------
-        alg_params = {
-            'FIELD': 'DN',
-            'INPUT': outputs['PolygonizeSlope']['OUTPUT'],
-            'OPERATOR': 0,
-            'VALUE': '1',
-            'OUTPUT': QgsProcessing.TEMPORARY_OUTPUT
-        }
-        outputs['ExtractSlope'] = processing.run(
-            'native:extractbyattribute',
-            alg_params,
-            context=context,
-            feedback=feedback,
-            is_child_algorithm=True
-        )
-
-        feedback.setCurrentStep(9)
-        if feedback.isCanceled():
-            return {}
-
-        # -------------------------
-        # 10) Recortar pela área do imóvel - DECLIVIDADE
-        # -------------------------
-        out_param_slope = parameters['DeclividadeAcimaDe45']
-        
         if not isinstance(out_param_slope, QgsProcessingOutputLayerDefinition):
-            output_slope = QgsProcessingOutputLayerDefinition(out_param_slope, context.project())
+            output_slope = QgsProcessingOutputLayerDefinition(
+                out_param_slope,
+                context.project()
+            )
         else:
             output_slope = out_param_slope
-            
-        output_slope.destinationName = 'Declividade_45'
+
+        output_slope.destinationName = 'Declividade_25_45'
 
         alg_params = {
             'INPUT': outputs['ExtractSlope']['OUTPUT'],
             'OVERLAY': parameters['area_do_imovel'],
             'OUTPUT': output_slope
         }
+
         outputs['ClipSlope'] = processing.run(
             'native:clip',
             alg_params,
@@ -345,22 +247,18 @@ class altitude_1800_Declividade_45(QgsProcessingAlgorithm):
             feedback=feedback,
             is_child_algorithm=True
         )
-        results['DeclividadeAcimaDe45'] = outputs['ClipSlope']['OUTPUT']
 
-        # Guardamos os IDs para o post-process
-        self.output_alt_id = outputs['ClipAlt']['OUTPUT']
+        results['Declividade25a45'] = outputs['ClipSlope']['OUTPUT']
+
         self.output_slope_id = outputs['ClipSlope']['OUTPUT']
 
-        return {
-            'ReaAcimaDe1800m': self.output_alt_id,
-            'DeclividadeAcimaDe45': self.output_slope_id
-        }
-
+        return results
+    
     def name(self):
-        return 'altitude_1800_Declividade_45'
+        return 'declividade_entre_25_45'
 
     def displayName(self):
-        return '2. Altitude > 1800 m e Declividade > 45°'
+        return '3. Declividade entre 25° e 45°'
 
     def group(self):
         return self.tr(self.groupId())
@@ -370,10 +268,10 @@ class altitude_1800_Declividade_45(QgsProcessingAlgorithm):
 
     def tr(self, string):
         return QCoreApplication.translate('Processing', string)
-
-    def createInstance(self):
-        return altitude_1800_Declividade_45()
     
+    def createInstance(self):
+        return declividade_25_45()
+
     def tags(self):
         return 'GeoOne,GeoCAR,GeoRural,ambiental,APP,SiCAR,slope,inclinação,rampa,altura,elevação,MDE,MDT'.split(',')
     
@@ -381,7 +279,7 @@ class altitude_1800_Declividade_45(QgsProcessingAlgorithm):
         return QIcon(os.path.join(os.path.dirname(os.path.dirname(__file__)), 'images/geocar.png'))
 
     def shortHelpString(self):
-        txt = """Identifica áreas com <b>altitude superior a 1800 m</b> e/ou <b>declividade maior que 45°</b> a partir de um Modelo Digital do Terreno (MDT).
+        txt = """Identifica áreas com <b>declividade entre 45° e 25°</b> a partir de um Modelo Digital do Terreno (MDT).
 
 A ferramenta calcula automaticamente a declividade do MDT, classifica os valores acima dos limites definidos e gera polígonos recortados pela <b>área do imóvel</b>, permitindo delimitar regiões que podem corresponder a <b>Áreas de Preservação Permanente (APP)</b>.
 
@@ -391,9 +289,8 @@ A ferramenta calcula automaticamente a declividade do MDT, classifica os valores
 • SRC (projetado) – sistema de coordenadas em metros (ex.: UTM)
 
 <b>Resultado:</b>
-São geradas duas camadas vetoriais:
-• <b>Área acima de 1800 m</b>  
-• <b>Declividade acima de 45°</b>
+São geradas duas camadas vetoriais: 
+• <b>Declividade entre 25° e 45°</b>
 
 <b>Observação:</b>
 O processamento requer um <b>SRC projetado</b> (ex.: UTM) e o plugin <b>LFTools</b> instalado no QGIS.
@@ -415,37 +312,19 @@ O processamento requer um <b>SRC projetado</b> (ex.: UTM) e o plugin <b>LFTools<
                       </div>
                     </div>'''
         return txt + footer
-
+    
     def postProcessAlgorithm(self, context, feedback):
-        def aplicar_hachura(layer_id, cor_hex):
-            # Obtém a camada a partir do ID/String
-            layer = QgsProcessingUtils.mapLayerFromString(layer_id, context)
-            if not layer:
-                return
-
-            # 1. Criar a camada de hachura (linhas)
+        layer = QgsProcessingUtils.mapLayerFromString(self.output_id, context)
+        if layer:
+            # Estilo: Hachura azul para identificar a faixa
             hachura = QgsLinePatternFillSymbolLayer()
-            hachura.setColor(QColor(cor_hex))
+            hachura.setColor(QColor("#44a0e6"))
             hachura.setLineAngle(45)
-            hachura.setDistance(2.0)   # Espaçamento entre linhas
-            hachura.setLineWidth(0.5)  # Espessura da linha
+            hachura.setDistance(2.5)
 
-            # 2. Criar símbolo de preenchimento com contorno
-            symbol = QgsFillSymbol.createSimple({
-                'color': '0,0,0,0',          # transparente
-                'outline_color': cor_hex,    # cor da borda
-                'outline_width': '0.4'       # espessura da borda
-            })
-
-            # 3. Adicionar a hachura como camada extra
+            symbol = QgsFillSymbol.createSimple({'color': '0,0,0,0', 'outline_color': '#44a0e6'})
             symbol.appendSymbolLayer(hachura)
-
-            # 4. Aplicar o renderizador
             layer.setRenderer(QgsSingleSymbolRenderer(symbol))
             layer.triggerRepaint()
-
-        # Cores solicitadas:
-        aplicar_hachura(self.output_alt_id, "#00ffeb")   # Altitude
-        aplicar_hachura(self.output_slope_id, "#44a0e6") # Declividade
 
         return {}
