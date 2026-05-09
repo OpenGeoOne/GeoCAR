@@ -331,7 +331,7 @@ class altitude_1800_Declividade_45(QgsProcessingAlgorithm):
         else:
             output_slope = out_param_slope
             
-        output_slope.destinationName = 'Declividade_45'
+        output_slope.destinationName = 'Declividade_Maior_45'
 
         alg_params = {
             'INPUT': outputs['ExtractSlope']['OUTPUT'],

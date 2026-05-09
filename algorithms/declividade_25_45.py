@@ -172,6 +172,10 @@ class declividade_25_45(QgsProcessingAlgorithm):
             is_child_algorithm=True
         )
 
+        feedback.setCurrentStep(3)
+        if feedback.isCanceled():
+            return {}
+        
         # -------------------------
         # Polygonize
         # -------------------------
@@ -222,7 +226,7 @@ class declividade_25_45(QgsProcessingAlgorithm):
         # -------------------------
         # Clip na área do imóvel
         # -------------------------
-        out_param_slope = parameters['Declividade25a45']
+        out_param_slope = parameters['Declividade2545']
 
         if not isinstance(out_param_slope, QgsProcessingOutputLayerDefinition):
             output_slope = QgsProcessingOutputLayerDefinition(
@@ -248,9 +252,12 @@ class declividade_25_45(QgsProcessingAlgorithm):
             is_child_algorithm=True
         )
 
-        results['Declividade25a45'] = outputs['ClipSlope']['OUTPUT']
+        results['Declividade2545'] = outputs['ClipSlope']['OUTPUT']
 
-        self.output_slope_id = outputs['ClipSlope']['OUTPUT']
+        self.output_id = outputs['ClipSlope']['OUTPUT']
+
+        results['Declividade2545'] = outputs['ClipSlope']['OUTPUT']
+        self.output_id = outputs['ClipSlope']['OUTPUT']
 
         return results
     
