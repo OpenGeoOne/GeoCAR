@@ -26,7 +26,7 @@ __author__ = 'Prof Cazaroli e Leandro França'
 __date__ = '2024-11-25'
 __copyright__ = '(C) 2024 by Prof Cazaroli e Leandro França'
 
-from qgis.PyQt.QtCore import QCoreApplication, QVariant
+from qgis.PyQt.QtCore import QCoreApplication, QMetaType
 from qgis.core import *
 import os
 from qgis.PyQt.QtGui import QIcon
