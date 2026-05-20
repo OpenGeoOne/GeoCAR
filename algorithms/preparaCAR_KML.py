@@ -58,7 +58,7 @@ class preparaCAR_KML(QgsProcessingAlgorithm):
         return 'preparaCAR_KML'
 
     def displayName(self):
-        return self.tr('7. Gerar Arquivo(s) KML')
+        return self.tr('8. Gerar Arquivo(s) KML')
 
     def group(self):
         return self.tr(self.groupId())
