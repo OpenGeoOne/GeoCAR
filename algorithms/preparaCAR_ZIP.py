@@ -36,7 +36,6 @@ from qgis.core import (QgsProject,
                        QgsProcessingAlgorithm,
                        QgsProcessingParameterFolderDestination)
 from qgis.PyQt.QtGui import QIcon
-from geocar.images.Imgs import *
 import os
 import zipfile
 
@@ -53,7 +52,7 @@ class preparaCAR_ZIP(QgsProcessingAlgorithm):
         return 'preparaCAR_ZIP'
 
     def displayName(self):
-        return self.tr('5. Gerar Zip para o CAR')
+        return self.tr('4. Gerar Zip para o CAR')
 
     def group(self):
         return self.tr(self.groupId())
@@ -81,7 +80,7 @@ São gerados arquivos <b>.ZIP</b> contendo os componentes do Shapefile (.shp, .s
 
         footer = '''<div>
                       <div align="center">
-                      <img style="width: 100%; height: auto;" src="data:image/jpg;base64,'''+ CAR_GeoOne +'''
+                      <a target="_blank" rel="noopener noreferrer" href="https://geoone.com.br/pvcar/"><img title="Inscreva-se no curso de CAR" style="width: 100%; height: auto;" src="'''+ os.path.join(os.path.dirname(os.path.dirname(__file__)), 'images/CAR_GeoOne.jpg') +'''"></a>
                       </div>
                       <div align="right">
                       <p align="right">
@@ -90,10 +89,11 @@ São gerados arquivos <b>.ZIP</b> contendo os componentes do Shapefile (.shp, .s
                       <p align="right">
                       <a href="https://portal.geoone.com.br/m/lessons/car?classId=5334"><span style="font-weight: bold;">Acesse a aula sobre esta ferramenta no curso de CAR da GeoOne</span></a>
                       </p>
-                      <a target="_blank" rel="noopener noreferrer" href="https://geoone.com.br/"><img title="GeoOne" src="data:image/png;base64,'''+ GeoOne +'''"></a>
+                      <a target="_blank" rel="noopener noreferrer" href="https://geoone.com.br/"><img title="GeoOne" width="280"  src="'''+ os.path.join(os.path.dirname(os.path.dirname(__file__)), 'images/GeoOne.png') +'''"></a>
                       <p><i>"Mapeamento automatizado, fácil e direto ao ponto é na GeoOne!"</i></p>
                       </div>
                     </div>'''
+        
         return txt + footer
 
     def initAlgorithm(self, config=None):
