@@ -43,7 +43,6 @@ from qgis.core import (QgsProject,
 from qgis.PyQt.QtGui import QIcon
 from qgis import processing
 import os
-from geocar.images.Imgs import *
 
 class preparaCAR_KML(QgsProcessingAlgorithm):
     OUTPUT_FOLDER = 'OUTPUT_FOLDER'
@@ -58,7 +57,7 @@ class preparaCAR_KML(QgsProcessingAlgorithm):
         return 'preparaCAR_KML'
 
     def displayName(self):
-        return self.tr('8. Gerar Arquivo(s) KML')
+        return self.tr('7. Gerar Arquivo(s) KML')
 
     def group(self):
         return self.tr(self.groupId())
@@ -84,16 +83,17 @@ Para cada camada exportada é gerado um arquivo <b>.kml</b>, reprojetado automat
 
         footer = '''<div>
                       <div align="center">
-                      <img style="width: 100%; height: auto;" src="data:image/jpg;base64,'''+ CAR_GeoOne +'''
+                      <a target="_blank" rel="noopener noreferrer" href="https://geoone.com.br/pvcar/"><img title="Inscreva-se no curso de CAR" style="width: 100%; height: auto;" src="'''+ os.path.join(os.path.dirname(os.path.dirname(__file__)), 'images/CAR_GeoOne.jpg') +'''"></a>
                       </div>
                       <div align="right">
                       <p align="right">
                       <a href="https://geoone.com.br/pvcar/"><span style="font-weight: bold;">Conheça o curso de Cadastro Ambiental Rural (CAR)</span></a>
                       </p>
-                      <a><img title="GeoOne" src="data:image/png;base64,'''+ GeoOne +'''"></a>
+                      <a target="_blank" rel="noopener noreferrer" href="https://geoone.com.br/"><img title="GeoOne" width="280"  src="'''+ os.path.join(os.path.dirname(os.path.dirname(__file__)), 'images/GeoOne.png') +'''"></a>
                       <p><i>"Mapeamento automatizado, fácil e direto ao ponto é na GeoOne!"</i></p>
                       </div>
                     </div>'''
+        
         return txt + footer
 
     def initAlgorithm(self, config=None):
