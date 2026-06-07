@@ -42,7 +42,6 @@ icon=images/car.png
 # experimental flag
 experimental=False
 server=False
-supportsQt6=True
 
 # deprecated flag (applies to the whole plugin, not just a single version)
 deprecated=False
