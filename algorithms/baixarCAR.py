@@ -191,7 +191,7 @@ class baixarCAR(QgsProcessingAlgorithm):
             feedback.pushInfo(f'{nomeCamada}: {total} imóvel(is)' + (f', {rejeitadas} rejeitado(s)' if rejeitadas else ''))
 
         global renamer
-        renamer = Renamer(layer)
+        renamer = Renamer('CAR_Vizinhos_SICAR')   # "CAR" no nome: ignorada na exportação
         context.layerToLoadOnCompletionDetails(dest_id).setPostProcessor(renamer)
 
         return {self.OUTPUT: dest_id}

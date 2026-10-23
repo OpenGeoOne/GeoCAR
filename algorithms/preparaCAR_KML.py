@@ -44,7 +44,7 @@ from qgis.PyQt.QtGui import QIcon
 from qgis import processing
 import os
 
-from .utilsExportacao import SEM_ERRO, camadaDeReferencia, exportarCamada
+from .utilsExportacao import SEM_ERRO, camadaDeReferencia, camadasParaExportar, exportarCamada
 
 class preparaCAR_KML(QgsProcessingAlgorithm):
     OUTPUT_FOLDER = 'OUTPUT_FOLDER'
@@ -81,6 +81,8 @@ A ferramenta percorre todas as camadas vetoriais do projeto e exporta apenas aqu
 • Pasta de destino – diretório onde os arquivos KML serão gravados.
 <b>Resultado:</b>
 Para cada camada exportada é gerado um arquivo <b>.kml</b>, reprojetado automaticamente para <b>WGS84</b> (EPSG:4326).
+
+<b>Camadas exportadas:</b> somente as da estrutura RAIZ (arquivos GeoCAR*.gpkg ou, na RAIZ de Goiás, a pasta da camada ATI). Camadas temporárias, a Consulta CAR, camadas de apoio e resultados da pré-análise ficam de fora, seja qual for o nome.
 """
 
         footer = '''<div>
@@ -114,7 +116,7 @@ Para cada camada exportada é gerado um arquivo <b>.kml</b>, reprojetado automat
         caminho = output_folder
 
         # Itera sobre as camadas vetoriais no projeto
-        for c in QgsProject.instance().mapLayers().values():
+        for c in camadasParaExportar(feedback):
             if c.type() == QgsMapLayer.VectorLayer:  # Verifica se é uma camada vetorial
                 if c.featureCount() > 0:  # Verifica se a camada tem feições
                     if camadaDeReferencia(c.name()): # não pega Camadas fora dos 5 Grupos

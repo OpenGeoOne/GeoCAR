@@ -38,7 +38,7 @@ from qgis.core import (QgsProject,
 from qgis.PyQt.QtGui import QIcon
 import os
 
-from .utilsExportacao import SEM_ERRO, camadaDeReferencia, exportarCamada
+from .utilsExportacao import SEM_ERRO, camadaDeReferencia, camadasParaExportar, exportarCamada
 
 class preparaCAR_SHP(QgsProcessingAlgorithm):
     OUTPUT_FOLDER = 'OUTPUT_FOLDER'
@@ -80,6 +80,8 @@ Para cada camada exportada são gerados os arquivos do Shapefile:
 • .shx  
 • .dbf  
 • .prj
+
+<b>Camadas exportadas:</b> somente as da estrutura RAIZ (arquivos GeoCAR*.gpkg ou, na RAIZ de Goiás, a pasta da camada ATI). Camadas temporárias, a Consulta CAR, camadas de apoio e resultados da pré-análise ficam de fora, seja qual for o nome.
 """
 
         footer = '''<div>
@@ -116,7 +118,7 @@ Para cada camada exportada são gerados os arquivos do Shapefile:
         caminho = output_folder
 
         # Itera sobre as camadas vetoriais no projeto
-        for c in QgsProject.instance().mapLayers().values():
+        for c in camadasParaExportar(feedback):
             if c.type() == QgsMapLayer.VectorLayer:  # Verifica se é uma camada vetorial
                 if c.featureCount() > 0:  # Verifica se a camada tem feições
                     if camadaDeReferencia(c.name()): # não pega Camadas fora dos 5 Grupos
