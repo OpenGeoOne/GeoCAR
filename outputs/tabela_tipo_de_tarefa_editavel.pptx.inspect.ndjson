@@ -1,0 +1,6 @@
+{"kind":"deck","id":"pr/k9jaei","name":"Deck"}
+{"kind":"layout","layoutId":"7e02f6fd-cf80-46a4-829b-791d99d730dd","name":"Master","type":"master"}
+{"kind":"layout","layoutId":"9236c34b-2637-4e40-8b06-96a8ceef62da","name":"Title Slide","type":"title"}
+{"kind":"slide","id":"sl/ou6azj","slide":1,"title":"Slide 1","textShapes":0}
+{"kind":"table","id":"tb/sbidwnix","slide":1,"name":"","rows":5,"cols":7,"preview":"Plano | Tipo de Tarefa","bbox":[28,100,1544,700]}
+{"kind":"notes","id":"nt/ou6azj","slide":1,"text":""}
