@@ -270,7 +270,7 @@ A ferramenta acessa automaticamente os serviços <b>WFS do SICAR</b> ou a base <
 • Camada – tipo de dado CAR a consultar  
 • Consultar base da GeoOne – utiliza o servidor GeoOne em vez do SICAR oficial
 <b>Resultado:</b>
-Os imóveis CAR encontrados na área selecionada são gravados na camada <b>CAR_Vizinhos_SICAR</b>, no grupo <b>Areas_Vizinhas</b>. A camada fica no <b>PreAnalise.gpkg</b> do projeto (criado na primeira execução, se ainda não existir), e cada consulta apaga a anterior. Com o projeto ainda não salvo, o resultado sai em camada temporária.
+Os imóveis CAR encontrados na área selecionada são gravados na camada <b>CAR_Vizinhos_SICAR</b>, no grupo <b>Areas_Vizinhas</b>. A camada fica no <b>Pre-Analise/PreAnalise.gpkg</b> do projeto (criado na primeira execução, se ainda não existir), e cada consulta apaga a anterior. Com o projeto ainda não salvo, o resultado sai em camada temporária.
 <b>Observação:</b>
 A área de consulta deve ser pequena (até aproximadamente 1°) para garantir desempenho adequado na consulta WFS.
 """

@@ -28,7 +28,8 @@ PASTA_RESULTADOS = 'Pre-Analise'
 GRUPO_RESULTADOS = 'Resultados da Pré-Análise'
 GRUPO_RESULTADOS_FIXO = GRUPO_RESULTADOS
 
-# Camadas fixas da estrutura RAIZ (vazias no modelo) ficam neste GeoPackage, fora do GeoCAR*.gpkg
+# Camadas fixas da estrutura RAIZ (vazias no modelo) ficam neste GeoPackage, na pasta Pre-Analise
+# do projeto, fora do GeoCAR*.gpkg
 ARQUIVO_FIXO = 'PreAnalise.gpkg'
 
 # Nomes de camada usados nas 5 RAIZ, para preencher as entradas automaticamente
@@ -123,13 +124,15 @@ def estiloFixo(camada):
 
 def criarEstruturaFixa(projeto):
     """
-    Cria no projeto (salvo) o PreAnalise.gpkg com as camadas fixas que faltam e os grupos
+    Cria no projeto (salvo) o Pre-Analise/PreAnalise.gpkg com as camadas fixas que faltam e os grupos
     Areas_Vizinhas, Apoio à Pré-Análise e Resultados da Pré-Análise, abaixo dos grupos existentes.
     A Area_Consolidada só é criada se o projeto ainda não tiver camada de área consolidada.
     """
     if not projetoSalvo(projeto):
         return False
-    gpkg = os.path.join(projeto.homePath(), ARQUIVO_FIXO)
+    pasta = os.path.join(projeto.homePath(), PASTA_RESULTADOS)
+    os.makedirs(pasta, exist_ok=True)
+    gpkg = os.path.join(pasta, ARQUIVO_FIXO)
     temConsolidada = any(projeto.mapLayersByName(n) for n in CANDIDATOS['consolidada'])
     raiz = projeto.layerTreeRoot()
     for nomeGrupo, nomes in GRUPOS_FIXOS:
