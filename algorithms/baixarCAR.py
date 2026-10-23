@@ -184,13 +184,13 @@ class baixarCAR(QgsProcessingAlgorithm):
         return 'baixarcar'
 
     def displayName(self):
-        return self.tr('1. Consulta CAR')
+        return self.tr('a. Consulta CAR')
 
     def group(self):
-        return self.tr(self.groupId())
+        return self.tr('1. 🔍 Consultas')
 
     def groupId(self):
-        return ''
+        return 'consultas'
 
     def tr(self, string):
         return QCoreApplication.translate('Processing', string)

@@ -53,10 +53,10 @@ class preparaCAR_SHP(QgsProcessingAlgorithm):
         return 'preparaCAR_SHP'
 
     def displayName(self):
-        return self.tr('2. Gerar Shapefile para o CAR')
+        return self.tr('b. Gerar Shapefile para o CAR')
 
     def group(self):
-        return self.tr('Gerar arquivos para o CAR')
+        return self.tr('4. 📤 Gerar arquivos para o CAR')
 
     def groupId(self):
         return 'gerararquivoscar'

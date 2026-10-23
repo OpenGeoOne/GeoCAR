@@ -170,13 +170,13 @@ class ValidacaoSobreposicoesCAR(QgsProcessingAlgorithm):
         return 'validacaosobreposicoescar'
 
     def displayName(self):
-        return self.tr('4. Validação e sobreposições')
+        return self.tr('a. Validação e sobreposições')
 
     def group(self):
-        return self.tr(self.groupId())
+        return self.tr('3. ✅ Pré-análise do CAR')
 
     def groupId(self):
-        return ''
+        return 'preanalise'
 
     def tr(self, string):
         return QCoreApplication.translate('Processing', string)
@@ -201,7 +201,7 @@ class ValidacaoSobreposicoesCAR(QgsProcessingAlgorithm):
 • sobreposição entre as feições da própria ATI
 • vegetação nativa ou área consolidada fora da ATI
 
-<b>Sobreposições:</b> cruza a ATI com as camadas de restrição escolhidas (por exemplo, o resultado da ferramenta <b>1. Consulta CAR</b>, parcelas SIGEF, UCs, Terras Indígenas, assentamentos e embargos) e informa a área e o percentual do imóvel atingido.
+<b>Sobreposições:</b> cruza a ATI com as camadas de restrição escolhidas (por exemplo, o resultado da ferramenta <b>Consulta CAR</b>, parcelas SIGEF, UCs, Terras Indígenas, assentamentos e embargos) e informa a área e o percentual do imóvel atingido.
 
 Os cálculos são feitos em <b>SIRGAS 2000 / UTM</b> do fuso do imóvel, escolhido automaticamente.
 """ + avisoLegal()

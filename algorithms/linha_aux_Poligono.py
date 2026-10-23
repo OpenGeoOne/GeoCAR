@@ -65,13 +65,13 @@ class linha_aux_Poligono(QgsProcessingAlgorithm):
         return 'linha_aux_Poligono'
 
     def displayName(self):
-        return self.tr('3. Linha Auxiliar para Polígono')
+        return self.tr('b. Linha Auxiliar para Polígono')
 
     def group(self):
-        return self.tr(self.groupId())
+        return self.tr('2. ✏️ Preparação das camadas')
 
     def groupId(self):
-        return ''
+        return 'preparacao'
     
     def tags(self):
         return 'GeoOne,GeoCAR,GeoRural,ambiental,APP,SiCAR,rio,buffer,offset,margem'.split(',')

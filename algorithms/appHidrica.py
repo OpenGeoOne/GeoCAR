@@ -226,13 +226,13 @@ class AppHidricaCAR(QgsProcessingAlgorithm):
         return 'apphidricacar'
 
     def displayName(self):
-        return self.tr('5. APP hídrica e escadinha')
+        return self.tr('b. APP hídrica e escadinha')
 
     def group(self):
-        return self.tr(self.groupId())
+        return self.tr('3. ✅ Pré-análise do CAR')
 
     def groupId(self):
-        return ''
+        return 'preanalise'
 
     def tr(self, string):
         return QCoreApplication.translate('Processing', string)
@@ -261,6 +261,6 @@ class AppHidricaCAR(QgsProcessingAlgorithm):
 
 Com a camada de <b>área consolidada</b>, separa o que deve ser recomposto do uso que pode ser mantido e verifica o <b>teto do art. 61-B</b> (10% até 2 MF; 20% de 2 a 4 MF).
 
-A hidrografia linear é tratada como eixo: a faixa é medida da borda do leito regular (largura/2). Complementa a ferramenta <b>2. APP altitude, declividade e uso restrito</b>.
+A hidrografia linear é tratada como eixo: a faixa é medida da borda do leito regular (largura/2). Complementa a ferramenta <b>APP altitude, declividade e uso restrito</b>.
 """ + avisoLegal()
         return txt + rodapeAjuda()
