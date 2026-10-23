@@ -51,7 +51,8 @@ from qgis.core import (
 from .nucleoCAR import analise
 from .nucleoCAR.processingCAR import (OPCOES_RL, VALORES_RL, avisoLegal, camadaFixa, camadaPadrao,
                                       camadasPadrao, destinoPadrao, garantirCamadaFixa, gravarECarregarResultado,
-                                      limparCamada, projetoSalvo, rodapeAjuda, substituirFeicoes)
+                                      limparCamada, projetoSalvo, resolverModuloFiscal, rodapeAjuda,
+                                      substituirFeicoes)
 from .nucleoCAR.sobreposicao import LARGURA_DIVISA_PADRAO, PERC_DIVISA_PADRAO
 
 
@@ -115,8 +116,8 @@ class ReservaLegalRelatorioCAR(QgsProcessingAlgorithm):
             self.addParameter(QgsProcessingParameterString(
                 chave, self.tr(f'{rotulo} — no relatório (opcional)'), optional=True))
         self.addParameter(QgsProcessingParameterNumber(
-            self.MODULO_FISCAL, self.tr('Módulo fiscal do município (ha)'), type=decimal,
-            minValue=0.01, defaultValue=20.0))
+            self.MODULO_FISCAL, self.tr('Módulo fiscal do município (ha) — 0 = automático pelos CARs vizinhos'),
+            type=decimal, minValue=0.0, defaultValue=0.0))
         self.addParameter(QgsProcessingParameterNumber(
             self.AREA_2008, self.tr('Área do imóvel em 22/07/2008 (ha) — 0 = usar a área da ATI'),
             type=decimal, minValue=0.0, defaultValue=0.0))
@@ -189,7 +190,10 @@ class ReservaLegalRelatorioCAR(QgsProcessingAlgorithm):
 
         parametrosAnalise = {
             'perimetro': camadaAti,
-            'modulo_fiscal_ha': self.parameterAsDouble(parameters, self.MODULO_FISCAL, context),
+            'modulo_fiscal_ha': resolverModuloFiscal(
+                self.parameterAsDouble(parameters, self.MODULO_FISCAL, context), camadaAti,
+                [c for c in self.parameterAsLayerList(parameters, self.INPUT_RESTRICOES, context)
+                 if isinstance(c, QgsVectorLayer)], feedback, context.project()),
             'area_2008_ha': self.parameterAsDouble(parameters, self.AREA_2008, context),
             'pct_rl': VALORES_RL[indiceRl],
             'vegetacao': self.parameterAsVectorLayer(parameters, self.INPUT_VEGETACAO, context),
@@ -205,6 +209,7 @@ class ReservaLegalRelatorioCAR(QgsProcessingAlgorithm):
                            if isinstance(c, QgsVectorLayer)],
             'largura_divisa': self.parameterAsDouble(parameters, self.LARGURA_DIVISA, context),
             'perc_divisa': self.parameterAsDouble(parameters, self.PERC_DIVISA, context),
+            'modulo_automatico': self.parameterAsDouble(parameters, self.MODULO_FISCAL, context) <= 0,
             'caminho_relatorio': caminhoHtml,
             'identificacao': {rotulo: self.parameterAsString(parameters, chave, context).strip()
                               for chave, rotulo in self.IDENTIFICACAO},

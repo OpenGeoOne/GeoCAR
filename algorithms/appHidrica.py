@@ -46,7 +46,7 @@ from qgis.core import (
 
 from .nucleoCAR import app as moduloApp
 from .nucleoCAR.processingCAR import (adicionarSaida, avisoLegal, camadaPadrao, camadaPoligonoArea,
-                                      camadasPadrao, gravarResultado, rodapeAjuda)
+                                      camadasPadrao, gravarResultado, resolverModuloFiscal, rodapeAjuda)
 from .nucleoCAR.utils import area_ha, feicoes_no_src, src_utm_sirgas, uniao
 from .nucleoCAR.validacao import verificar_extrapolacao
 
@@ -101,8 +101,8 @@ class AppHidricaCAR(QgsProcessingAlgorithm):
             defaultValue=camadaPadrao('ati') or 'ATI'))
 
         self.addParameter(QgsProcessingParameterNumber(
-            self.MODULO_FISCAL, self.tr('Módulo fiscal do município (ha)'), type=decimal,
-            minValue=0.01, defaultValue=20.0))
+            self.MODULO_FISCAL, self.tr('Módulo fiscal do município (ha) — 0 = automático pelos CARs vizinhos'),
+            type=decimal, minValue=0.0, defaultValue=0.0))
 
         self.addParameter(QgsProcessingParameterNumber(
             self.AREA_2008, self.tr('Área do imóvel em 22/07/2008 (ha) — 0 = usar a área da ATI'),
@@ -155,7 +155,8 @@ class AppHidricaCAR(QgsProcessingAlgorithm):
         if camadaAti is None or camadaAti.featureCount() == 0:
             raise QgsProcessingException(self.tr('A camada ATI está vazia ou não foi informada.'))
 
-        moduloFiscal = self.parameterAsDouble(parameters, self.MODULO_FISCAL, context)
+        moduloFiscal = resolverModuloFiscal(self.parameterAsDouble(parameters, self.MODULO_FISCAL, context),
+                                            camadaAti, [], feedback, context.project())
         area2008 = self.parameterAsDouble(parameters, self.AREA_2008, context)
         camadaHidro = self.parameterAsVectorLayer(parameters, self.INPUT_HIDROGRAFIA, context)
         campoLargura = self.parameterAsString(parameters, self.CAMPO_LARGURA, context) or None

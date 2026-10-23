@@ -71,7 +71,8 @@ def gerar_relatorio_html(r, caminho):
     partes.append(_tabela(["Item", "Valor"], identificacao + [
         ["Área do imóvel (ha)", _n(r["area_imovel_ha"])],
         ["Área considerada em 22/07/2008 (ha)", _n(r["area_2008_ha"])],
-        ["Módulo fiscal do município (ha)", _n(r["modulo_fiscal_ha"], 2)],
+        ["Módulo fiscal do município (ha)" + (" — obtido dos CARs vizinhos; confira na tabela do INCRA"
+                                              if r.get("modulo_automatico") else ""), _n(r["modulo_fiscal_ha"], 2)],
         ["Número de módulos fiscais", _n(r["n_modulos"], 2)],
         ["Parcelas na camada", r["n_parcelas"]],
         ["SRC de cálculo", r["src"]],

@@ -175,6 +175,33 @@ def garantirCamadaFixa(nome, projeto=None):
     return camada
 
 
+def resolverModuloFiscal(valor, camadaAti, camadasExtras, feedback, projeto=None):
+    """
+    Devolve o módulo fiscal (ha). Com valor > 0, usa o informado; com 0, calcula pelos CARs vizinhos
+    (camada CAR_Vizinhos_SICAR e camadas de restrição com os campos do SICAR).
+    """
+    if valor > 0:
+        return valor
+    from .modulo_fiscal import moduloFiscalPelosVizinhos
+    from .utils import feicoes_no_src, src_utm_sirgas, uniao
+    projeto = projeto or QgsProject.instance()
+    camadas = list(camadasExtras or [])
+    for nome in CANDIDATOS['restricoes']:
+        camadas += [c for c in projeto.mapLayersByName(nome) if c not in camadas]
+    referencia = QgsGeometry.unaryUnion([f.geometry().makeValid() for f in camadaAti.getFeatures() if f.hasGeometry()])
+    src = src_utm_sirgas(referencia, camadaAti.crs())
+    perimetro = uniao([g.makeValid() for _fid, _a, g in feicoes_no_src(camadaAti, src)])
+    resultado = moduloFiscalPelosVizinhos(camadas, perimetro, src)
+    if resultado is None:
+        raise QgsProcessingException(
+            'Não foi possível obter o módulo fiscal automaticamente: rode a Consulta CAR (CAR_Vizinhos_SICAR) '
+            'ou informe o módulo fiscal do município (tabela do INCRA).')
+    modulo, municipio, n = resultado
+    feedback.pushInfo(f'Módulo fiscal obtido dos CARs vizinhos: {modulo:g} ha '
+                      f'(município IBGE {municipio}, mediana de {n} imóvel(is)). Confira na tabela do INCRA.')
+    return modulo
+
+
 def camadaFixa(nome, projeto=None):
     """Camada fixa da RAIZ com esse nome, gravada no PreAnalise.gpkg do projeto, ou None."""
     projeto = projeto or QgsProject.instance()

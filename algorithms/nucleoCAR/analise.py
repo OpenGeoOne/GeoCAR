@@ -100,6 +100,7 @@ def executar(p):
         "area_imovel_ha": area_imovel,
         "area_2008_ha": area_2008,
         "modulo_fiscal_ha": p["modulo_fiscal_ha"],
+        "modulo_automatico": p.get("modulo_automatico", False),
         "n_modulos": n_modulos,
         "n_parcelas": len(parcelas),
         "problemas": problemas,
