@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Geração do relatório HTML da pré-análise do CAR."""
+"""Geração do relatório da pré-análise do CAR em HTML ou PDF."""
 
 from html import escape
 
@@ -29,7 +29,8 @@ def _n(valor, casas=4):
 
 def _tabela(cabecalho, linhas, colunas_num=()):
     """Monta uma tabela HTML. colunas_num: índices alinhados à direita."""
-    html = ["<table><tr>"] + [f"<th>{escape(c)}</th>" for c in cabecalho] + ["</tr>"]
+    # Atributos de tabela garantem as bordas também na impressão em PDF (QTextDocument)
+    html = ['<table border="1" cellspacing="0" cellpadding="4" width="100%"><tr>'] + [f"<th>{escape(c)}</th>" for c in cabecalho] + ["</tr>"]
     for linha in linhas:
         html.append("<tr>")
         for i, valor in enumerate(linha):
@@ -41,7 +42,7 @@ def _tabela(cabecalho, linhas, colunas_num=()):
 
 
 def gerar_relatorio_html(r, caminho):
-    """Gera o relatório HTML a partir do dicionário de resumo da análise."""
+    """Gera o relatório a partir do resumo da análise: PDF se o caminho terminar em .pdf, senão HTML."""
     partes = [
         "<!doctype html><html lang='pt-BR'><head><meta charset='utf-8'>",
         f"<title>Pré-análise do CAR</title><style>{CSS}</style></head><body>",
@@ -87,11 +88,14 @@ def gerar_relatorio_html(r, caminho):
     for aviso in a["avisos"]:
         partes.append(f"<div class='aviso'>{escape(aviso)}</div>")
     if a["detalhes"]:
+        agrupados = {}
+        for d in a["detalhes"]:
+            chave = (d["tipo"], d["faixa_integral"], d["faixa_consolidada"])
+            agrupados[chave] = agrupados.get(chave, 0) + 1
         partes.append(_tabela(
-            ["Feição", "Faixa integral art. 4º (m)", "Faixa escadinha art. 61-A (m)"],
-            [[d["tipo"], _n(d["faixa_integral"], 1), _n(d["faixa_consolidada"], 1)]
-             for d in a["detalhes"]],
-            colunas_num=(1, 2)))
+            ["Feição", "Qtde", "Faixa integral art. 4º (m)", "Faixa escadinha art. 61-A (m)"],
+            [[tipo, qtde, _n(fi, 1), _n(fc, 1)] for (tipo, fi, fc), qtde in agrupados.items()],
+            colunas_num=(1, 2, 3)))
 
     linhas_app = [
         ["APP integral (art. 4º)", _n(a["integral_ha"])],
@@ -133,7 +137,39 @@ def gerar_relatorio_html(r, caminho):
         "pode ser mais restritiva. A faixa da escadinha (art. 61-A) aplica-se somente a áreas "
         "rurais consolidadas até 22/07/2008, devidamente comprovadas.</p>")
     partes.append("</body></html>")
+    html = "".join(partes)
 
+    if caminho.lower().endswith(".pdf"):
+        return _salvar_pdf(html, caminho)
     with open(caminho, "w", encoding="utf-8") as arq:
-        arq.write("".join(partes))
+        arq.write(html)
+    return caminho
+
+
+def _salvar_pdf(html, caminho):
+    """Converte o HTML do relatório em PDF (A4) com QTextDocument e QPrinter, sem dependências externas."""
+    from qgis.PyQt.QtCore import QMarginsF, QSizeF
+    from qgis.PyQt.QtGui import QPageLayout, QPageSize, QTextDocument
+    from qgis.PyQt.QtPrintSupport import QPrinter
+
+    from .utils import enum_compat
+
+    # ScreenResolution mantém as medidas em px do CSS proporcionais (o texto continua vetorial no PDF)
+    impressora = QPrinter(enum_compat(QPrinter, "PrinterMode", "ScreenResolution"))
+    impressora.setOutputFormat(enum_compat(QPrinter, "OutputFormat", "PdfFormat"))
+    impressora.setOutputFileName(caminho)
+    # QPageLayout funciona igual no Qt5 e no Qt6 (setPageMargins mudou de assinatura)
+    impressora.setPageLayout(QPageLayout(
+        QPageSize(enum_compat(QPageSize, "PageSizeId", "A4")),
+        enum_compat(QPageLayout, "Orientation", "Portrait"),
+        QMarginsF(15, 15, 15, 15),
+        enum_compat(QPageLayout, "Unit", "Millimeter")))
+    impressora.setDocName("Pré-análise do CAR")
+
+    documento = QTextDocument()
+    documento.setHtml(html)
+    areaUtil = impressora.pageLayout().paintRectPixels(impressora.resolution())
+    documento.setPageSize(QSizeF(areaUtil.width(), areaUtil.height()))
+    imprimir = getattr(documento, "print", None) or getattr(documento, "print_")   # Qt6 / Qt5
+    imprimir(impressora)
     return caminho

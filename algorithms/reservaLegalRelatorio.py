@@ -116,8 +116,8 @@ class ReservaLegalRelatorioCAR(QgsProcessingAlgorithm):
             self.INPUT_RESTRICOES, self.tr('Camadas de restrição (sobreposição)'),
             layerType=poligono, optional=True))
         self.addParameter(QgsProcessingParameterFileDestination(
-            self.OUTPUT_HTML, self.tr('Relatório de pré-análise'),
-            fileFilter='HTML (*.html)'))
+            self.OUTPUT_HTML, self.tr('Relatório de pré-análise (PDF ou HTML)'),
+            fileFilter='PDF (*.pdf);;HTML (*.html)'))
 
         self.addOutput(QgsProcessingOutputNumber(self.OUTPUT_RL_EXIGIDA, self.tr('RL exigida (ha)')))
         self.addOutput(QgsProcessingOutputNumber(self.OUTPUT_VEGETACAO, self.tr('Vegetação nativa (ha)')))
@@ -180,6 +180,10 @@ class ReservaLegalRelatorioCAR(QgsProcessingAlgorithm):
             self.OUTPUT_DEFICIT_SEM_APP: round(rl['deficit_sem_app_ha'], 4),
         }
 
+    def flags(self):
+        # A geração do PDF usa QTextDocument/QPrinter, que devem rodar na thread principal
+        return super().flags() | Qgis.ProcessingAlgorithmFlag.NoThreading
+
     def name(self):
         return 'reservalegalrelatoriocar'
 
@@ -206,7 +210,7 @@ class ReservaLegalRelatorioCAR(QgsProcessingAlgorithm):
         return QIcon(os.path.join(os.path.dirname(os.path.dirname(__file__)), 'images/qualidade.png'))
 
     def shortHelpString(self):
-        txt = """Executa a <b>pré-análise completa do CAR</b> e gera um <b>relatório HTML</b>.
+        txt = """Executa a <b>pré-análise completa do CAR</b> e gera um <b>relatório em PDF ou HTML</b> (escolha pela extensão do arquivo de saída).
 
 <b>Reserva Legal:</b>
 • RL exigida pelo percentual do art. 12 (20%, 35% ou 80%)
