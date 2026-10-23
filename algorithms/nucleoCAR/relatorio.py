@@ -116,7 +116,11 @@ def gerar_relatorio_html(r, caminho):
     a = r["app"]
     partes.append("<h2>4. Áreas de Preservação Permanente (hídricas)</h2>")
     for aviso in a["avisos"]:
-        partes.append(f"<div class='aviso'>{escape(aviso)}</div>")
+        if aviso.startswith("Área consolidada não informada"):
+            # Destaque: o usuário pode ter esquecido a camada
+            partes.append(f"<div class='aviso'><b class='alerta'>{escape(aviso)}</b></div>")
+        else:
+            partes.append(f"<div class='aviso'>{escape(aviso)}</div>")
     if a["detalhes"]:
         agrupados = {}
         for d in a["detalhes"]:

@@ -48,6 +48,10 @@ def faixa_lago_integral(superficie_ha):
 RAIO_NASCENTE_INTEGRAL = 50.0   # art. 4º, IV
 
 
+AVISO_SEM_CONSOLIDADA = ("Área consolidada não informada — APP calculada no cenário integral (sem escadinha). "
+                         "Se o imóvel tem uso anterior a 22/07/2008, informe a camada e refaça a análise.")
+
+
 def faixa_rio_consolidada(n_modulos, largura_m):
     """Art. 61-A, §§1º a 4º — faixa mínima de recomposição em rio (m)."""
     if n_modulos <= 1:
@@ -203,8 +207,7 @@ def calcular_app(perimetro, src_trabalho, n_modulos, hidrografia=None,
         consolidada_liberada = None
         app_nao_consolidada = None
         if integral:
-            avisos.append("Camada de área consolidada não informada: a faixa da 'escadinha' é "
-                          "apresentada apenas como referência.")
+            avisos.insert(0, AVISO_SEM_CONSOLIDADA)   # primeiro aviso da seção de APP
 
     if not integral:
         avisos.append("Nenhuma feição hídrica informada ou encontrada próxima ao imóvel.")

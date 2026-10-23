@@ -206,6 +206,8 @@ class ReservaLegalRelatorioCAR(QgsProcessingAlgorithm):
                                   f"Vegetação nativa: {rl['vegetacao_ha']:.4f} ha"))
         feedback.pushInfo(self.tr(f"Déficit com cômputo da APP: {rl['deficit_com_app_ha']:.4f} ha | "
                                   f"sem cômputo: {rl['deficit_sem_app_ha']:.4f} ha"))
+        for aviso in resumo['app']['avisos']:
+            feedback.pushWarning(aviso)
         for observacao in rl['observacoes']:
             feedback.pushWarning(observacao)
         feedback.pushInfo(self.tr(f'Relatório gravado em: {caminhoHtml}'))
