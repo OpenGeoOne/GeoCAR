@@ -21,7 +21,7 @@ repository=https://github.com/OpenGeoOne/GeoCAR
 
 hasProcessingProvider=yes
 # Uncomment the following line and add your changelog:
-# changelog=
+changelog=
   1.3.0: New CAR pre-analysis tools: 8. geometry validation and overlaps, 9. water APP and art. 61-A step rule, 10. Legal Reserve and HTML report. Fixes: writeAsVectorFormatV3 and word-based reference layer filter in ZIP/SHP/KML export; clear error when Consulta CAR extent hits no state; SIRGAS 2000 UTM zone detection in Auxiliary Line for Polygon.
   1.2.3: Added a GeoCAR tool for automatic mapping of APP areas above 1800 m, slopes above 45°, and restricted-use areas between 25° and 45° from DEM/DTM data.
   1.2.2: Updated for compatibility with QGIS 4.0
