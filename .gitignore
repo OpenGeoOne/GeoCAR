@@ -7,3 +7,10 @@ __pycache__/GeoCAR_provider.cpython-312.pyc
 algorithms/__pycache__/obtemCAR.cpython-312.pyc
 algorithms/__pycache__/preparaCAR.cpython-312.pyc
 /algorithms/__pycache__
+
+# Arquivos do macOS (Finder)
+.DS_Store
+**/.DS_Store
+
+# Saídas locais de trabalho (não fazem parte do plugin)
+outputs/
