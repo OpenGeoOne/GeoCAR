@@ -139,7 +139,17 @@ class baixarCAR(QgsProcessingAlgorithm):
                  uri_default = uri_default.replace('xx',feat['SIGLA_UF'].lower())
                  uris.append(uri_default)
 
+        # Extensão fora de qualquer UF (mar, SRC do projeto errado etc.)
+        if not uris:
+            raise QgsProcessingException(
+                'A extensão escolhida não intercepta nenhuma UF do Brasil. '
+                'Verifique o retângulo e o SRC do projeto.')
+
         source = QgsVectorLayer(uris[0], "my wfs layer", "WFS")
+        if not source.isValid():
+            raise QgsProcessingException(
+                'Não foi possível acessar o serviço WFS. Verifique a conexão com a internet '
+                'ou tente novamente mais tarde.')
         (sink, dest_id) = self.parameterAsSink(
             parameters,
             self.OUTPUT,

@@ -38,6 +38,8 @@ from qgis.core import (QgsProject,
 from qgis.PyQt.QtGui import QIcon
 import os
 
+from .utilsExportacao import SEM_ERRO, camadaDeReferencia, exportarCamada
+
 class preparaCAR_SHP(QgsProcessingAlgorithm):
     OUTPUT_FOLDER = 'OUTPUT_FOLDER'
 
@@ -117,17 +119,15 @@ Para cada camada exportada são gerados os arquivos do Shapefile:
         for c in QgsProject.instance().mapLayers().values():
             if c.type() == QgsMapLayer.VectorLayer:  # Verifica se é uma camada vetorial
                 if c.featureCount() > 0:  # Verifica se a camada tem feições
-                    if "Geo" in c.name() or "CAR" in c.name() or "INCRA" in c.name(): # não pega Camadas fora dos 5 Grupos
+                    if camadaDeReferencia(c.name()): # não pega Camadas fora dos 5 Grupos
                         continue
                     # Define o caminho+nome do Shapefile
                     camArq = os.path.join(caminho, c.name())
 
                     # Exporta a camada para Shapefile
-                    error = QgsVectorFileWriter.writeAsVectorFormat(
-                        c, camArq + ".shp", "UTF-8", c.crs(), "ESRI Shapefile"
-                    )
+                    error = exportarCamada(c, camArq + ".shp", "ESRI Shapefile")
 
-                    if error[0] == QgsVectorFileWriter.NoError:
+                    if error[0] == SEM_ERRO:
                         # Lista de extensões associadas ao Shapefile
                         extensoes = [".shp", ".shx", ".dbf", ".prj"]
 

@@ -45,7 +45,8 @@ from qgis.core import (
     QgsProcessingParameterEnum,
     QgsProcessingException,
     QgsProcessingUtils,
-    QgsCoordinateReferenceSystem
+    QgsCoordinateReferenceSystem,
+    QgsPointXY
 )
 
 class linha_aux_Poligono(QgsProcessingAlgorithm):
@@ -138,11 +139,18 @@ O algoritmo gera um buffer a partir da linha, reprojeta automaticamente para UTM
         if feedback.isCanceled(): return {}
 
         # --- PASSO 1: DETECTAR FUSO UTM PARA BUFFER PRECISO ---
+        # O centro é levado para SIRGAS 2000 geográfico, para que o fuso fique correto
+        # mesmo se a Linha_Auxiliar não estiver em graus
         extent = line_lyr.extent()
-        center_x = (extent.xMinimum() + extent.xMaximum()) / 2
-        center_y = (extent.yMinimum() + extent.yMaximum()) / 2
+        centro = QgsPointXY(extent.center())
+        crs_geo = QgsCoordinateReferenceSystem('EPSG:4674')
+        if line_lyr.crs() != crs_geo:
+            xform_geo = QgsCoordinateTransform(line_lyr.crs(), crs_geo, QgsProject.instance())
+            centro = xform_geo.transform(centro)
+        center_x, center_y = centro.x(), centro.y()
         utm_zone = int((center_x + 180) / 6) + 1
-        epsg_utm = 32700 + utm_zone if center_y < 0 else 32600 + utm_zone
+        # SIRGAS 2000 / UTM: 319xx (Sul = 31960 + fuso; Norte = 31954 + fuso)
+        epsg_utm = 31960 + utm_zone if center_y < 0 else 31954 + utm_zone
         target_crs = f"EPSG:{epsg_utm}"
         
         feedback.pushInfo(f"Fuso detectado: {target_crs}. Reprojetando para Buffer...")

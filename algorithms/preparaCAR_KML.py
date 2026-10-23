@@ -44,6 +44,8 @@ from qgis.PyQt.QtGui import QIcon
 from qgis import processing
 import os
 
+from .utilsExportacao import SEM_ERRO, camadaDeReferencia, exportarCamada
+
 class preparaCAR_KML(QgsProcessingAlgorithm):
     OUTPUT_FOLDER = 'OUTPUT_FOLDER'
 
@@ -115,17 +117,15 @@ Para cada camada exportada é gerado um arquivo <b>.kml</b>, reprojetado automat
         for c in QgsProject.instance().mapLayers().values():
             if c.type() == QgsMapLayer.VectorLayer:  # Verifica se é uma camada vetorial
                 if c.featureCount() > 0:  # Verifica se a camada tem feições
-                    if "Geo" in c.name() or "CAR" in c.name() or "INCRA" in c.name(): # não pega Camadas fora dos 5 Grupos
+                    if camadaDeReferencia(c.name()): # não pega Camadas fora dos 5 Grupos
                         continue
                     # Define o caminho+nome do Shapefile
                     camArq = os.path.join(caminho, c.name())
 
                     # Exporta a camada para Shapefile
-                    error = QgsVectorFileWriter.writeAsVectorFormat(
-                        c, camArq + ".shp", "UTF-8", c.crs(), "ESRI Shapefile"
-                    )
+                    error = exportarCamada(c, camArq + ".shp", "ESRI Shapefile")
 
-                    if error[0] == QgsVectorFileWriter.NoError:
+                    if error[0] == SEM_ERRO:
                         # Lista de extensões associadas ao Shapefile
                         extensoes = [".shp", ".shx", ".dbf", ".prj", ".cpg"]
 
@@ -146,15 +146,9 @@ Para cada camada exportada é gerado um arquivo <b>.kml</b>, reprojetado automat
                             }
                             c = processing.run('native:reprojectlayer', params_reproj, context=context)['OUTPUT']
 
-                        error = QgsVectorFileWriter.writeAsVectorFormat(
-                            c,
-                            nomeKML,
-                            'UTF-8',
-                            c.crs(),
-                            'KML'
-                        )
+                        error = exportarCamada(c, nomeKML, 'KML')
 
-                        if error[0] == QgsVectorFileWriter.NoError:
+                        if error[0] == SEM_ERRO:
                             feedback.pushInfo(self.tr(f'Exportado: {nomeKML}'))
                         else:
                             feedback.reportError(self.tr(f'Erro ao exportar {nomeKML}'))

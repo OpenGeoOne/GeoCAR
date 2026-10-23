@@ -37,6 +37,9 @@ from .algorithms.preparaCAR_SHP import preparaCAR_SHP
 from .algorithms.preparaCAR_KML import preparaCAR_KML
 from .algorithms.linha_aux_Poligono import linha_aux_Poligono
 from .algorithms.altitudeDeclividade import AltitudeDeclividadeAPPUsoRestrito
+from .algorithms.validacaoSobreposicoes import ValidacaoSobreposicoesCAR
+from .algorithms.appHidrica import AppHidricaCAR
+from .algorithms.reservaLegalRelatorio import ReservaLegalRelatorioCAR
 
 class GeoCARProvider(QgsProcessingProvider):
     def __init__(self):
@@ -53,6 +56,9 @@ class GeoCARProvider(QgsProcessingProvider):
         self.addAlgorithm(preparaCAR_KML())
         self.addAlgorithm(linha_aux_Poligono())
         self.addAlgorithm(AltitudeDeclividadeAPPUsoRestrito())
+        self.addAlgorithm(ValidacaoSobreposicoesCAR())
+        self.addAlgorithm(AppHidricaCAR())
+        self.addAlgorithm(ReservaLegalRelatorioCAR())
 
     def id(self):
         return 'GeoCAR'
