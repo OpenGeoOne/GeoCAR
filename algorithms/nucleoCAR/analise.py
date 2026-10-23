@@ -74,7 +74,11 @@ def executar(p):
     )
     limite = modulo_app.limite_61b(n_modulos, area_imovel)
     area_recompor = area_ha(res_app["app_recompor"])
-    if res_app["app_nao_consolidada"] is not None:
+    tem_consolidada = consolidada is not None and not consolidada.isEmpty()
+    if not tem_consolidada:
+        # Sem área consolidada a escadinha não se aplica: toda a APP integral deve ser preservada
+        area_recompor_total = area_ha(res_app["app_integral"])
+    elif res_app["app_nao_consolidada"] is not None:
         area_recompor_total = area_recompor + area_ha(res_app["app_nao_consolidada"])
     else:
         area_recompor_total = area_recompor
@@ -107,7 +111,7 @@ def executar(p):
             "recompor_ha": area_recompor,
             "recompor_total_ha": area_recompor_total,
             "liberada_ha": area_ha(res_app["consolidada_liberada"]),
-            "tem_consolidada": consolidada is not None and not consolidada.isEmpty(),
+            "tem_consolidada": tem_consolidada,
             "consolidada_ha": area_ha(consolidada),
             "limite_61b_ha": limite,
         },

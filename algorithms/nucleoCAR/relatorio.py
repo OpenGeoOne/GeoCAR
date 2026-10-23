@@ -138,9 +138,13 @@ def gerar_relatorio_html(r, caminho):
             ["Uso consolidado que pode ser mantido em APP", _n(a["liberada_ha"])],
             ["Total de APP a preservar/recompor", _n(a["recompor_total_ha"])],
         ]
+    else:
+        linhas_app.append(["Total de APP a preservar (toda a APP integral)", _n(a["recompor_total_ha"])])
     partes.append(_tabela(["Tema", "Área (ha)"], linhas_app, colunas_num=(1,)))
 
-    if a["limite_61b_ha"] is not None:
+    if a["limite_61b_ha"] is not None and not a["tem_consolidada"]:
+        partes.append("<p>Limite do art. 61-B: não se aplica — área consolidada não informada.</p>")
+    elif a["limite_61b_ha"] is not None:
         excede = a["recompor_total_ha"] > a["limite_61b_ha"]
         classe = "alerta" if excede else "ok"
         texto = ("excede o limite — a recomposição fica limitada ao teto legal"

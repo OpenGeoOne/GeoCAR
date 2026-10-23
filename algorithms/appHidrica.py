@@ -193,9 +193,13 @@ class AppHidricaCAR(QgsProcessingAlgorithm):
                               f"escadinha {detalhe['faixa_consolidada']:g} m")
 
         temConsolidada = consolidada is not None and not consolidada.isEmpty()
-        areaRecompor = area_ha(resultado['app_recompor'])
-        if resultado['app_nao_consolidada'] is not None:
-            areaRecompor += area_ha(resultado['app_nao_consolidada'])
+        if temConsolidada:
+            areaRecompor = area_ha(resultado['app_recompor'])
+            if resultado['app_nao_consolidada'] is not None:
+                areaRecompor += area_ha(resultado['app_nao_consolidada'])
+        else:
+            # Sem área consolidada a escadinha não se aplica: toda a APP integral deve ser preservada
+            areaRecompor = area_ha(resultado['app_integral'])
         limite61b = moduloApp.limite_61b(nModulos, areaImovel)
 
         # Gravação das saídas
@@ -216,6 +220,9 @@ class AppHidricaCAR(QgsProcessingAlgorithm):
 
         feedback.pushInfo(self.tr(f'APP integral: {area_ha(resultado["app_integral"]):.4f} ha'))
         feedback.pushInfo(self.tr(f'APP a preservar/recompor: {areaRecompor:.4f} ha'))
+        if limite61b is not None and not temConsolidada:
+            feedback.pushInfo(self.tr('Limite do art. 61-B não se aplica: área consolidada não informada.'))
+            limite61b = None
         if limite61b is not None:
             if areaRecompor > limite61b:
                 feedback.pushWarning(self.tr(f'Excede o limite do art. 61-B ({limite61b:.4f} ha): '
