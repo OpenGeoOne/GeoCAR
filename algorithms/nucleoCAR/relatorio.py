@@ -88,11 +88,26 @@ def gerar_relatorio_html(r, caminho):
     # Sobreposições
     partes.append("<h2>3. Sobreposições</h2>")
     if r["sobreposicoes"]:
+        largura_divisa, perc_divisa = r.get("criterio_divisa", (15.0, 2.0))
+        relevantes = [s for s in r["sobreposicoes"] if s["classe"] == "Sobreposição relevante"]
+        divisas = [s for s in r["sobreposicoes"] if s["classe"] != "Sobreposição relevante"]
+        if relevantes:
+            partes.append(f"<p class='alerta'>Sobreposição relevante: {_n(sum(s['area_ha'] for s in relevantes))} ha "
+                          f"em {len(relevantes)} feição(ões) — conflito de área a resolver antes do envio "
+                          f"(verificar matrícula, posse, CAR duplicado ou desmembramento).</p>")
+        else:
+            partes.append("<p class='ok'>Nenhuma sobreposição relevante.</p>")
+        if divisas:
+            partes.append(f"<p>Ajuste de divisa: {_n(sum(s['area_ha'] for s in divisas))} ha em {len(divisas)} "
+                          f"feição(ões) — faixas estreitas ao longo do limite, típicas de digitalização "
+                          f"sobre imagens diferentes.</p>")
         partes.append(_tabela(
-            ["Camada", "Identificador", "Área (ha)", "% do imóvel"],
-            [[s["camada"], s["identificador"] or f"fid {s['feicao']}",
-              _n(s["area_ha"]), _n(s["percentual"], 2)] for s in r["sobreposicoes"]],
-            colunas_num=(2, 3)))
+            ["Camada", "Identificador", "Classe", "Área (ha)", "% do imóvel", "Larg. média (m)"],
+            [[s["camada"], s["identificador"] or f"fid {s['feicao']}", s["classe"],
+              _n(s["area_ha"]), _n(s["percentual"], 2), _n(s["largura_m"], 1)] for s in r["sobreposicoes"]],
+            colunas_num=(3, 4, 5)))
+        partes.append(f"<p>Critério: ajuste de divisa quando a largura média (2·área/perímetro) é de até "
+                      f"{_n(largura_divisa, 1)} m e a área é de até {_n(perc_divisa, 1)}% do imóvel.</p>")
     else:
         partes.append("<p class='ok'>Nenhuma sobreposição com as camadas de restrição "
                       "selecionadas.</p>")

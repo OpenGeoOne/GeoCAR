@@ -14,7 +14,7 @@ from qgis.core import QgsGeometry
 from . import app as modulo_app
 from .relatorio import gerar_relatorio_html
 from .reserva_legal import calcular_rl
-from .sobreposicao import analisar_sobreposicoes
+from .sobreposicao import LARGURA_DIVISA_PADRAO, PERC_DIVISA_PADRAO, analisar_sobreposicoes
 from .utils import adicionar_feicao, area_ha, criar_camada_memoria, src_utm_sirgas, uniao
 from .validacao import validar_perimetro, verificar_extrapolacao
 
@@ -56,7 +56,10 @@ def executar(p):
     problemas += [x for x in (prob_veg, prob_cons) if x]
 
     # --- 2. Sobreposições ---
-    sobreposicoes = analisar_sobreposicoes(perimetro, area_imovel, p["restricoes"], src)
+    largura_divisa = p.get("largura_divisa", LARGURA_DIVISA_PADRAO)
+    perc_divisa = p.get("perc_divisa", PERC_DIVISA_PADRAO)
+    sobreposicoes = analisar_sobreposicoes(perimetro, area_imovel, p["restricoes"], src,
+                                           largura_divisa, perc_divisa)
 
     # --- 3. APP ---
     res_app = modulo_app.calcular_app(
@@ -95,6 +98,7 @@ def executar(p):
         "n_parcelas": len(parcelas),
         "problemas": problemas,
         "sobreposicoes": sobreposicoes,
+        "criterio_divisa": (largura_divisa, perc_divisa),
         "app": {
             "detalhes": res_app["detalhes"],
             "avisos": res_app["avisos"],
@@ -147,11 +151,12 @@ def _criar_camadas(src, perimetro, area_imovel, n_modulos, problemas, sobreposic
     if sobreposicoes:
         c_sob = criar_camada_memoria("Sobreposições", "MultiPolygon", src,
                                      [("camada", "string"), ("identific", "string"),
-                                      ("area_ha", "double"), ("perc", "double")])
+                                      ("classe", "string"), ("area_ha", "double"),
+                                      ("perc", "double"), ("larg_med", "double")])
         for s in sobreposicoes:
             adicionar_feicao(c_sob, s["geometria"],
-                             [s["camada"], s["identificador"], round(s["area_ha"], 4),
-                              round(s["percentual"], 2)])
+                             [s["camada"], s["identificador"], s["classe"], round(s["area_ha"], 4),
+                              round(s["percentual"], 2), round(s["largura_m"], 2)])
         camadas.append(c_sob)
 
     # APPs

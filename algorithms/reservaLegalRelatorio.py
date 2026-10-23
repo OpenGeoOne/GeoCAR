@@ -47,6 +47,7 @@ from qgis.core import (
 
 from .nucleoCAR import analise
 from .nucleoCAR.processingCAR import OPCOES_RL, VALORES_RL, avisoLegal, rodapeAjuda
+from .nucleoCAR.sobreposicao import LARGURA_DIVISA_PADRAO, PERC_DIVISA_PADRAO
 
 
 class ReservaLegalRelatorioCAR(QgsProcessingAlgorithm):
@@ -65,6 +66,8 @@ class ReservaLegalRelatorioCAR(QgsProcessingAlgorithm):
     INPUT_LAGOS = 'INPUT_LAGOS'
     INPUT_RIOS_POLIGONO = 'INPUT_RIOS_POLIGONO'
     INPUT_RESTRICOES = 'INPUT_RESTRICOES'
+    LARGURA_DIVISA = 'LARGURA_DIVISA'
+    PERC_DIVISA = 'PERC_DIVISA'
     OUTPUT_HTML = 'OUTPUT_HTML'
 
     OUTPUT_RL_EXIGIDA = 'OUTPUT_RL_EXIGIDA'
@@ -115,6 +118,13 @@ class ReservaLegalRelatorioCAR(QgsProcessingAlgorithm):
         self.addParameter(QgsProcessingParameterMultipleLayers(
             self.INPUT_RESTRICOES, self.tr('Camadas de restrição (sobreposição)'),
             layerType=poligono, optional=True))
+        self.addParameter(QgsProcessingParameterNumber(
+            self.LARGURA_DIVISA, self.tr('Ajuste de divisa: largura média máxima da faixa (m)'),
+            type=Qgis.ProcessingNumberParameterType.Double, minValue=0.0, defaultValue=LARGURA_DIVISA_PADRAO))
+        self.addParameter(QgsProcessingParameterNumber(
+            self.PERC_DIVISA, self.tr('Ajuste de divisa: área máxima (% do imóvel)'),
+            type=Qgis.ProcessingNumberParameterType.Double, minValue=0.0, maxValue=100.0,
+            defaultValue=PERC_DIVISA_PADRAO))
         self.addParameter(QgsProcessingParameterFileDestination(
             self.OUTPUT_HTML, self.tr('Relatório de pré-análise (PDF ou HTML)'),
             fileFilter='PDF (*.pdf);;HTML (*.html)'))
@@ -150,6 +160,8 @@ class ReservaLegalRelatorioCAR(QgsProcessingAlgorithm):
                               if c is not None and c.type() == 0],
             'restricoes': [c for c in self.parameterAsLayerList(parameters, self.INPUT_RESTRICOES, context)
                            if isinstance(c, QgsVectorLayer)],
+            'largura_divisa': self.parameterAsDouble(parameters, self.LARGURA_DIVISA, context),
+            'perc_divisa': self.parameterAsDouble(parameters, self.PERC_DIVISA, context),
             'caminho_relatorio': caminhoHtml,
         }
 
