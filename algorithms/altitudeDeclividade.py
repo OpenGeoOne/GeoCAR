@@ -372,13 +372,13 @@ class AltitudeDeclividadeAPPUsoRestrito(QgsProcessingAlgorithm):
         return 'AltitudeDeclividadeAPPUsoRestrito'.lower()
 
     def displayName(self):
-        return self.tr('a. APP altitude, declividade e uso restrito')
+        return self.tr('b. APP altitude, declividade e uso restrito')
 
     def group(self):
-        return self.tr('2. 📝 Preparação das camadas')
+        return self.tr('1. 🔍 Consultas')
 
     def groupId(self):
-        return 'preparacao'
+        return 'consultas'
 
     def tr(self, string):
         return QCoreApplication.translate('Processing', string)
