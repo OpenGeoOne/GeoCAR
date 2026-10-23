@@ -189,7 +189,7 @@ class ValidacaoSobreposicoesCAR(QgsProcessingAlgorithm):
                 'sobreposição,vizinho,SIGEF,UC,terra indígena,embargo,pré-análise').split(',')
 
     def icon(self):
-        return QIcon(os.path.join(os.path.dirname(os.path.dirname(__file__)), 'images/geocar.png'))
+        return QIcon(os.path.join(os.path.dirname(os.path.dirname(__file__)), 'images/qualidade.png'))
 
     def shortHelpString(self):
         txt = """Faz a <b>pré-análise geométrica</b> da Área Total do Imóvel (ATI) antes do envio ou da retificação do CAR.

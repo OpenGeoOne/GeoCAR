@@ -77,7 +77,7 @@ class linha_aux_Poligono(QgsProcessingAlgorithm):
         return 'GeoOne,GeoCAR,GeoRural,ambiental,APP,SiCAR,rio,buffer,offset,margem'.split(',')
 
     def icon(self):
-        return QIcon(os.path.join(os.path.dirname(os.path.dirname(__file__)), 'images/geocar.png'))
+        return QIcon(os.path.join(os.path.dirname(os.path.dirname(__file__)), 'images/vetor.png'))
 
     def shortHelpString(self):
         txt = """Converte uma camada de <b>Linha_Auxiliar</b> em um polígono com largura definida pelo usuário, útil para representar elementos lineares que possuem largura real no terreno, como <b>rios, estradas ou canais</b>.

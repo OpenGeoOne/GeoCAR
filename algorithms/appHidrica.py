@@ -245,7 +245,7 @@ class AppHidricaCAR(QgsProcessingAlgorithm):
                 'área consolidada,61-A,61-B,Código Florestal,módulo fiscal').split(',')
 
     def icon(self):
-        return QIcon(os.path.join(os.path.dirname(os.path.dirname(__file__)), 'images/geocar.png'))
+        return QIcon(os.path.join(os.path.dirname(os.path.dirname(__file__)), 'images/qualidade.png'))
 
     def shortHelpString(self):
         txt = """Calcula as <b>Áreas de Preservação Permanente hídricas</b> dentro da ATI.

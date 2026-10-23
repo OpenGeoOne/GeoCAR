@@ -196,7 +196,7 @@ class ReservaLegalRelatorioCAR(QgsProcessingAlgorithm):
                 'relatório,pré-análise,Código Florestal,art. 67,art. 15').split(',')
 
     def icon(self):
-        return QIcon(os.path.join(os.path.dirname(os.path.dirname(__file__)), 'images/geocar.png'))
+        return QIcon(os.path.join(os.path.dirname(os.path.dirname(__file__)), 'images/qualidade.png'))
 
     def shortHelpString(self):
         txt = """Executa a <b>pré-análise completa do CAR</b> e gera um <b>relatório HTML</b>.

@@ -390,7 +390,7 @@ class AltitudeDeclividadeAPPUsoRestrito(QgsProcessingAlgorithm):
         return 'GeoOne,GeoCAR,GeoRural,ambiental,APP,SiCAR,slope,declividade,inclinação,rampa,altura,altitude,elevação,MDE,MDT,Código Florestal,uso restrito'.split(',')
 
     def icon(self):
-        return QIcon(os.path.join(os.path.dirname(os.path.dirname(__file__)), 'images/geocar.png'))
+        return QIcon(os.path.join(os.path.dirname(os.path.dirname(__file__)), 'images/relevo.png'))
 
     def shortHelpString(self):
         txt = """Identifica automaticamente três classes ambientais relacionadas ao Código Florestal a partir de um Modelo Digital de Elevação/Terreno (MDE/MDT):
