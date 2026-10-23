@@ -26,10 +26,16 @@ __author__ = 'Prof Cazaroli e Leandro França'
 __date__ = '2024-11-25'
 __copyright__ = '(C) 2024 by Prof Cazaroli e Leandro França'
 
-from qgis.PyQt.QtCore import QCoreApplication, QMetaType
+from qgis.PyQt.QtCore import QCoreApplication, QMetaType, QTimer
 from qgis.core import *
 import os
 from qgis.PyQt.QtGui import QIcon
+
+# Resultado da Consulta CAR na estrutura RAIZ
+NOME_VIZINHOS = 'CAR_Vizinhos_SICAR'
+PASTA_VIZINHOS = 'Areas Vizinhas com CAR'
+GRUPO_VIZINHOS = 'Areas_Vizinhas'
+
 
 class baixarCAR(QgsProcessingAlgorithm):
     INPUT = 'INPUT'
@@ -83,10 +89,14 @@ class baixarCAR(QgsProcessingAlgorithm):
             )
         )
 
+        # Destino padrão: pasta "Areas Vizinhas com CAR" do projeto (estrutura RAIZ), se o projeto estiver salvo
+        pastaProjeto = QgsProject.instance().homePath()
+        destinoPadrao = os.path.join(pastaProjeto, PASTA_VIZINHOS, NOME_VIZINHOS + '.shp') if pastaProjeto else None
         self.addParameter(
             QgsProcessingParameterFeatureSink(
                 self.OUTPUT,
-                self.tr('Resultado da consulta')
+                self.tr('Resultado da consulta'),
+                defaultValue=destinoPadrao
             )
         )
 
@@ -158,6 +168,11 @@ class baixarCAR(QgsProcessingAlgorithm):
                 if camposUniao.indexFromName(campo.name()) < 0:
                     camposUniao.append(campo)
 
+        # Cria a pasta de destino quando o resultado for gravado em arquivo
+        destino = self.parameterAsOutputLayer(parameters, self.OUTPUT, context)
+        if destino and os.path.splitext(destino)[1] and not destino.startswith(('memory:', 'ogr:', 'postgres:')):
+            os.makedirs(os.path.dirname(destino), exist_ok=True)
+
         (sink, dest_id) = self.parameterAsSink(
             parameters,
             self.OUTPUT,
@@ -191,7 +206,7 @@ class baixarCAR(QgsProcessingAlgorithm):
             feedback.pushInfo(f'{nomeCamada}: {total} imóvel(is)' + (f', {rejeitadas} rejeitado(s)' if rejeitadas else ''))
 
         global renamer
-        renamer = Renamer('CAR_Vizinhos_SICAR')   # "CAR" no nome: ignorada na exportação
+        renamer = Renamer(NOME_VIZINHOS)   # "CAR" no nome: ignorada na exportação
         context.layerToLoadOnCompletionDetails(dest_id).setPostProcessor(renamer)
 
         return {self.OUTPUT: dest_id}
@@ -253,9 +268,44 @@ A área de consulta deve ser pequena (até aproximadamente 1°) para garantir de
 
 
 class Renamer (QgsProcessingLayerPostProcessorInterface):
+    """Renomeia a camada de resultado, coloca no grupo Areas_Vizinhas e remove a cópia antiga do mesmo arquivo."""
+
     def __init__(self, layer_name):
         self.name = layer_name
         super().__init__()
 
     def postProcessLayer(self, layer, context, feedback):
         layer.setName(self.name)
+        projeto = context.project() or QgsProject.instance()
+        idCamada = layer.id()
+        # Depois que o Processing termina de inserir a camada na árvore
+        QTimer.singleShot(0, lambda: organizarVizinhos(projeto, idCamada))
+
+
+def organizarVizinhos(projeto, idCamada):
+    """Move a camada para o grupo Areas_Vizinhas (criado abaixo dos grupos da RAIZ, se não existir)."""
+    camada = projeto.mapLayer(idCamada)
+    if camada is None:
+        return
+    raiz = projeto.layerTreeRoot()
+
+    # Remove camadas antigas que apontam para o mesmo arquivo (consulta refeita)
+    fonte = camada.source().split('|')[0]
+    if camada.providerType() == 'ogr':
+        for outra in list(projeto.mapLayers().values()):
+            if outra.id() != idCamada and outra.providerType() == 'ogr' and outra.source().split('|')[0] == fonte:
+                projeto.removeMapLayer(outra.id())
+
+    grupo = next((g for g in raiz.findGroups(True) if g.name().lower() == GRUPO_VIZINHOS.lower()), None)
+    if grupo is None:
+        # Abaixo do último grupo da raiz, acima das camadas soltas (ex.: Google Hybrid)
+        indices = [i for i, filho in enumerate(raiz.children()) if isinstance(filho, QgsLayerTreeGroup)]
+        grupo = raiz.insertGroup(indices[-1] + 1 if indices else 0, GRUPO_VIZINHOS)
+
+    no = raiz.findLayer(idCamada)
+    if no is None:
+        grupo.insertLayer(0, camada)
+    elif no.parent() is not grupo:
+        clone = no.clone()
+        grupo.insertChildNode(0, clone)
+        no.parent().removeChildNode(no)
