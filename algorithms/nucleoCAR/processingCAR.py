@@ -5,8 +5,10 @@
 import os
 
 from qgis.PyQt.QtCore import QTimer
-from qgis.core import (QgsFeature, QgsFeatureSink, QgsLayerTreeGroup, QgsProcessingException,
-                       QgsProcessingLayerPostProcessorInterface, QgsProject, QgsProviderRegistry)
+from qgis.core import (QgsFeature, QgsFeatureSink, QgsLayerTreeGroup, QgsProcessingContext,
+                       QgsProcessingException, QgsProcessingLayerPostProcessorInterface, QgsProcessingUtils,
+                       QgsProject, QgsProviderRegistry, QgsVectorFileWriter, QgsCategorizedSymbolRenderer,
+                       QgsFillSymbol, QgsRendererCategory)
 
 from .utils import adicionar_feicao, area_ha, criar_camada_memoria
 
@@ -67,10 +69,24 @@ class PosProcessamentoGrupo(QgsProcessingLayerPostProcessorInterface):
     def postProcessLayer(self, layer, context, feedback):
         if self.nomeCamada:
             layer.setName(self.nomeCamada)
+        aplicarEstilo(layer)
         projeto = context.project() or QgsProject.instance()
         idCamada = layer.id()
         # Depois que o Processing termina de inserir a camada na árvore
         QTimer.singleShot(0, lambda: moverParaGrupo(projeto, idCamada, self.nomeGrupo))
+
+
+def aplicarEstilo(camada):
+    """Sobreposições coloridas por classe: relevante em vermelho, ajuste de divisa em laranja."""
+    if camada.fields().indexFromName('classe') < 0 or camada.fields().indexFromName('larg_med') < 0:
+        return
+    categorias = [
+        QgsRendererCategory('Sobreposição relevante', QgsFillSymbol.createSimple(
+            {'color': '255,0,0,140', 'outline_color': '180,0,0', 'outline_width': '0.6'}), 'Sobreposição relevante'),
+        QgsRendererCategory('Ajuste de divisa', QgsFillSymbol.createSimple(
+            {'color': '255,165,0,160', 'outline_color': '255,140,0', 'outline_width': '0.4'}), 'Ajuste de divisa'),
+    ]
+    camada.setRenderer(QgsCategorizedSymbolRenderer('classe', categorias))
 
 
 def definirPosProcessamento(context, destId, nomeCamada, nomeGrupo):
@@ -150,6 +166,32 @@ def gravarCamadaNoSink(algoritmo, parameters, chave, context, camadaMemoria, nom
     if nomeCamada:
         definirPosProcessamento(context, destId, nomeCamada, nomeGrupo)
     return destId
+
+
+def gravarECarregarResultado(context, camadaMemoria, nomeCamada, nomeGrupo=GRUPO_RESULTADOS):
+    """
+    Grava a camada de memória em Pre-Analise/<nomeCamada>.gpkg (ou em arquivo temporário, se o projeto
+    não estiver salvo) e agenda o carregamento no grupo de resultados ao fim do algoritmo.
+    Retorna o caminho gravado.
+    """
+    caminho = destinoPadrao(nomeCamada + '.gpkg') or QgsProcessingUtils.generateTempFilename(nomeCamada + '.gpkg')
+    prepararDestino(caminho, context.project())
+    opcoes = QgsVectorFileWriter.SaveVectorOptions()
+    opcoes.driverName = 'GPKG'
+    opcoes.fileEncoding = 'UTF-8'
+    opcoes.layerName = nomeCamada
+    resultado = QgsVectorFileWriter.writeAsVectorFormatV3(
+        camadaMemoria, caminho, context.transformContext(), opcoes)
+    semErro = getattr(getattr(QgsVectorFileWriter, 'WriterError', QgsVectorFileWriter), 'NoError')
+    if resultado[0] != semErro:
+        raise QgsProcessingException(f'Erro ao gravar {caminho}: {resultado[1]}')
+
+    detalhes = QgsProcessingContext.LayerDetails(nomeCamada, context.project() or QgsProject.instance(), nomeCamada)
+    pos = PosProcessamentoGrupo(nomeCamada, nomeGrupo)
+    _posProcessadores[caminho] = pos
+    detalhes.setPostProcessor(pos)
+    context.addLayerToLoadOnCompletion(caminho, detalhes)
+    return caminho
 
 
 def camadaPoligonoArea(nome, src, geometria):

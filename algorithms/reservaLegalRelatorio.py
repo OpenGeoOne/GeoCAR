@@ -35,6 +35,7 @@ from qgis.core import (
     Qgis,
     QgsProcessingAlgorithm,
     QgsProcessingException,
+    QgsProcessingParameterBoolean,
     QgsProcessingOutputNumber,
     QgsProcessingParameterEnum,
     QgsProcessingParameterField,
@@ -46,7 +47,8 @@ from qgis.core import (
 )
 
 from .nucleoCAR import analise
-from .nucleoCAR.processingCAR import OPCOES_RL, VALORES_RL, avisoLegal, destinoPadrao, rodapeAjuda
+from .nucleoCAR.processingCAR import (OPCOES_RL, VALORES_RL, avisoLegal, destinoPadrao,
+                                      gravarECarregarResultado, rodapeAjuda)
 from .nucleoCAR.sobreposicao import LARGURA_DIVISA_PADRAO, PERC_DIVISA_PADRAO
 
 
@@ -69,6 +71,18 @@ class ReservaLegalRelatorioCAR(QgsProcessingAlgorithm):
     LARGURA_DIVISA = 'LARGURA_DIVISA'
     PERC_DIVISA = 'PERC_DIVISA'
     OUTPUT_HTML = 'OUTPUT_HTML'
+    GERAR_CAMADAS = 'GERAR_CAMADAS'
+
+    # Camadas da análise -> nomes dos resultados da 3a e da 3b (o perímetro em UTM não é gravado)
+    CAMADAS_RESULTADO = {
+        'Problemas de validação': '3a_problemas',
+        'Sobreposições': '3a_sobreposicoes',
+        'APP integral (art. 4º)': '3b_APP_integral',
+        'Faixa escadinha (art. 61-A)': '3b_faixa_escadinha',
+        'APP a recompor em área consolidada': '3b_APP_recompor_consolidada',
+        'Uso consolidado mantido em APP': '3b_uso_consolidado_em_APP',
+        'APP fora de área consolidada': '3b_APP_fora_consolidada',
+    }
 
     OUTPUT_RL_EXIGIDA = 'OUTPUT_RL_EXIGIDA'
     OUTPUT_VEGETACAO = 'OUTPUT_VEGETACAO'
@@ -129,6 +143,10 @@ class ReservaLegalRelatorioCAR(QgsProcessingAlgorithm):
             self.OUTPUT_HTML, self.tr('Relatório de pré-análise (PDF ou HTML)'),
             fileFilter='PDF (*.pdf);;HTML (*.html)',
             defaultValue=destinoPadrao('3c_relatorio_pre_analise.pdf')))
+        self.addParameter(QgsProcessingParameterBoolean(
+            self.GERAR_CAMADAS,
+            self.tr('Gerar também as camadas de resultado (as mesmas das ferramentas a e b)'),
+            defaultValue=False))
 
         self.addOutput(QgsProcessingOutputNumber(self.OUTPUT_RL_EXIGIDA, self.tr('RL exigida (ha)')))
         self.addOutput(QgsProcessingOutputNumber(self.OUTPUT_VEGETACAO, self.tr('Vegetação nativa (ha)')))
@@ -173,6 +191,14 @@ class ReservaLegalRelatorioCAR(QgsProcessingAlgorithm):
             raise QgsProcessingException(str(erro))
 
         resumo = resultado['resumo']
+
+        # Camadas de resultado em Pre-Analise/, carregadas no grupo Resultados da Pré-Análise
+        if self.parameterAsBool(parameters, self.GERAR_CAMADAS, context):
+            for camada in resultado['camadas']:
+                nome = self.CAMADAS_RESULTADO.get(camada.name())
+                if nome:
+                    caminho = gravarECarregarResultado(context, camada, nome)
+                    feedback.pushInfo(self.tr(f'Camada gravada: {caminho}'))
         rl = resumo['rl']
         feedback.pushInfo(self.tr(f"Área: {resumo['area_imovel_ha']:.4f} ha | "
                                   f"Módulos fiscais: {resumo['n_modulos']:.2f}"))
@@ -228,7 +254,7 @@ class ReservaLegalRelatorioCAR(QgsProcessingAlgorithm):
 • APP hídrica integral, faixa da escadinha e teto do art. 61-B
 • Reserva Legal
 
-Para ver os resultados como <b>camadas no mapa</b>, use as ferramentas <b>a. Validação e sobreposições</b> e <b>b. APP hídrica e escadinha</b>.
+Marque <b>Gerar também as camadas de resultado</b> para gravar em <b>Pre-Analise/</b> e carregar no grupo <b>Resultados da Pré-Análise</b> as mesmas camadas das ferramentas <b>a. Validação e sobreposições</b> e <b>b. APP hídrica e escadinha</b>.
 
 <b>Reserva Legal:</b>
 • RL exigida pelo percentual do art. 12 (20%, 35% ou 80%)
