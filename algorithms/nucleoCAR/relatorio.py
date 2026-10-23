@@ -18,6 +18,21 @@ td.num { text-align: right; font-variant-numeric: tabular-nums; }
         padding-top: 8px; }
 """
 
+# Versão compacta do CSS para o PDF (o QTextDocument não herda o tamanho da fonte da tabela para as células)
+CSS_PDF = """
+body { font-family: Arial, sans-serif; font-size: 8pt; color: #1f2933; }
+p { font-size: 8pt; margin: 2px 0; }
+h1 { font-size: 15pt; color: #2e7d32; margin: 0 0 2px 0; }
+h2 { font-size: 11pt; color: #1b5e20; margin: 10px 0 3px 0; }
+th, td { font-size: 7.5pt; border: 1px solid #cfd8dc; padding: 1px 3px; text-align: left; }
+th { background: #e8f5e9; }
+td.num { text-align: right; }
+.ok { color: #2e7d32; font-weight: 600; }
+.alerta { color: #c62828; font-weight: 600; }
+.aviso { font-size: 7.5pt; background: #fff8e1; margin: 2px 0; }
+.nota { font-size: 7pt; color: #607d8b; margin-top: 12px; }
+"""
+
 
 def _n(valor, casas=4):
     """Formata número no padrão brasileiro."""
@@ -165,6 +180,9 @@ def _salvar_pdf(html, caminho):
         QMarginsF(15, 15, 15, 15),
         enum_compat(QPageLayout, "Unit", "Millimeter")))
     impressora.setDocName("Pré-análise do CAR")
+
+    # No PDF usa o CSS compacto, para as tabelas caberem inteiras na página
+    html = html.replace(CSS, CSS_PDF, 1)
 
     documento = QTextDocument()
     documento.setHtml(html)
