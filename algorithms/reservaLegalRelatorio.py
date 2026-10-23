@@ -51,7 +51,7 @@ from .nucleoCAR.sobreposicao import LARGURA_DIVISA_PADRAO, PERC_DIVISA_PADRAO
 
 
 class ReservaLegalRelatorioCAR(QgsProcessingAlgorithm):
-    """Reserva Legal e relatório HTML consolidado (validação, sobreposições, APP e RL)."""
+    """Pré-análise completa e relatório em PDF ou HTML (validação, sobreposições, APP e Reserva Legal)."""
 
     INPUT_ATI = 'INPUT_ATI'
     MODULO_FISCAL = 'MODULO_FISCAL'
@@ -200,7 +200,7 @@ class ReservaLegalRelatorioCAR(QgsProcessingAlgorithm):
         return 'reservalegalrelatoriocar'
 
     def displayName(self):
-        return self.tr('c. Reserva Legal e relatório de pré-análise')
+        return self.tr('c. Pré-análise completa e relatório')
 
     def group(self):
         return self.tr('3. ✅ Pré-análise do CAR')
@@ -222,15 +222,18 @@ class ReservaLegalRelatorioCAR(QgsProcessingAlgorithm):
         return QIcon(os.path.join(os.path.dirname(os.path.dirname(__file__)), 'images/qualidade.png'))
 
     def shortHelpString(self):
-        txt = """Executa a <b>pré-análise completa do CAR</b> e gera um <b>relatório em PDF ou HTML</b> (escolha pela extensão do arquivo de saída).
+        txt = """Executa <b>de uma vez</b> a pré-análise completa do CAR e gera um <b>relatório em PDF ou HTML</b> (escolha pela extensão do arquivo de saída):
+• validação geométrica da ATI e sobreposições (ajuste de divisa ou relevante)
+• APP hídrica integral, faixa da escadinha e teto do art. 61-B
+• Reserva Legal
+
+Para ver os resultados como <b>camadas no mapa</b>, use as ferramentas <b>a. Validação e sobreposições</b> e <b>b. APP hídrica e escadinha</b>.
 
 <b>Reserva Legal:</b>
 • RL exigida pelo percentual do art. 12 (20%, 35% ou 80%)
 • vegetação nativa existente na ATI
 • déficit <b>com</b> e <b>sem</b> o cômputo da APP na RL (art. 15)
 • alerta do <b>art. 67</b> para imóveis de até 4 módulos fiscais em 22/07/2008
-
-<b>O relatório também reúne:</b> validação geométrica da ATI, sobreposições, APP hídrica integral, faixa da escadinha e teto do art. 61-B — as mesmas análises das ferramentas <b>Validação e sobreposições</b> e <b>APP hídrica e escadinha</b>.
 
 As áreas calculadas ficam disponíveis como saídas numéricas, para uso em modelos do Processing.
 """ + avisoLegal()
