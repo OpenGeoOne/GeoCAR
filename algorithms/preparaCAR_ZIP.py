@@ -66,7 +66,7 @@ class preparaCAR_ZIP(QgsProcessingAlgorithm):
         return 'GeoOne,GeoCAR,GeoRural,ambiental,APP,SiCAR,SIGCAR,compactar,ZIP'.split(',')
 
     def icon(self):
-        return QIcon(os.path.join(os.path.dirname(os.path.dirname(__file__)), 'images/geoincra_pb.png'))
+        return QIcon(os.path.join(os.path.dirname(os.path.dirname(__file__)), 'images/geocar2.png'))
 
     def shortHelpString(self):
         txt = """Exporta automaticamente as camadas vetoriais do projeto para <b>Shapefile</b> e compacta cada uma em arquivos <b>.ZIP</b>, no formato utilizado para importação no <b>Aplicativo do Cadastro Ambiental Rural (CAR)</b>.
