@@ -62,10 +62,10 @@ class preparaCAR_KML(QgsProcessingAlgorithm):
         return self.tr('7. Gerar Arquivo(s) KML')
 
     def group(self):
-        return self.tr(self.groupId())
+        return self.tr('Gerar arquivos para o CAR')
 
     def groupId(self):
-        return ''
+        return 'gerararquivoscar'
     
     def tags(self):
         return 'GeoOne,GeoCAR,GeoRural,ambiental,APP,SiCAR,KML,KMZ,Google,Earth'.split(',')

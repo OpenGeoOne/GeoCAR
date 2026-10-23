@@ -56,10 +56,10 @@ class preparaCAR_SHP(QgsProcessingAlgorithm):
         return self.tr('5. Gerar Shapefile para o CAR')
 
     def group(self):
-        return self.tr(self.groupId())
+        return self.tr('Gerar arquivos para o CAR')
 
     def groupId(self):
-        return ''
+        return 'gerararquivoscar'
     
     def tags(self):
         return 'GeoOne,GeoCAR,GeoRural,ambiental,APP,SiCAR,shp,shapefile'.split(',')

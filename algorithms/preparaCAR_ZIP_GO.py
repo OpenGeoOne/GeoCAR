@@ -50,10 +50,10 @@ class preparaCAR_ZIP_GO(QgsProcessingAlgorithm):
         return self.tr('6. Gerar Zip para o CAR de Goiás (ZIP Único)')
 
     def group(self):
-        return self.tr(self.groupId())
+        return self.tr('Gerar arquivos para o CAR')
 
     def groupId(self):
-        return ''
+        return 'gerararquivoscar'
     
     def tags(self):
         return 'GeoOne,GeoCAR,GeoRural,ambiental,APP,SiCAR,Goias,Goiania,Cerrado,SIGCAR,murundus,compactar,ZIP'.split(',')

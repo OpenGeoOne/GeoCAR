@@ -57,10 +57,10 @@ class preparaCAR_ZIP(QgsProcessingAlgorithm):
         return self.tr('4. Gerar Zip para o CAR')
 
     def group(self):
-        return self.tr(self.groupId())
+        return self.tr('Gerar arquivos para o CAR')
 
     def groupId(self):
-        return ''
+        return 'gerararquivoscar'
     
     def tags(self):
         return 'GeoOne,GeoCAR,GeoRural,ambiental,APP,SiCAR,SIGCAR,compactar,ZIP'.split(',')
