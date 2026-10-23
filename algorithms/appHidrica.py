@@ -45,8 +45,8 @@ from qgis.core import (
 )
 
 from .nucleoCAR import app as moduloApp
-from .nucleoCAR.processingCAR import (avisoLegal, camadaPoligonoArea, destinoPadrao, gravarCamadaNoSink,
-                                      rodapeAjuda)
+from .nucleoCAR.processingCAR import (adicionarSaida, avisoLegal, camadaPadrao, camadaPoligonoArea,
+                                      camadasPadrao, gravarResultado, rodapeAjuda)
 from .nucleoCAR.utils import area_ha, feicoes_no_src, src_utm_sirgas, uniao
 from .nucleoCAR.validacao import verificar_extrapolacao
 
@@ -97,7 +97,8 @@ class AppHidricaCAR(QgsProcessingAlgorithm):
         decimal = Qgis.ProcessingNumberParameterType.Double
 
         self.addParameter(QgsProcessingParameterVectorLayer(
-            self.INPUT_ATI, self.tr('Área Total do Imóvel (ATI)'), [poligono], defaultValue='ATI'))
+            self.INPUT_ATI, self.tr('Área Total do Imóvel (ATI)'), [poligono],
+            defaultValue=camadaPadrao('ati') or 'ATI'))
 
         self.addParameter(QgsProcessingParameterNumber(
             self.MODULO_FISCAL, self.tr('Módulo fiscal do município (ha)'), type=decimal,
@@ -109,7 +110,8 @@ class AppHidricaCAR(QgsProcessingAlgorithm):
 
         self.addParameter(QgsProcessingParameterVectorLayer(
             self.INPUT_HIDROGRAFIA, self.tr("Cursos d'água — eixo (linhas)"),
-            [Qgis.ProcessingSourceType.VectorLine], optional=True))
+            [Qgis.ProcessingSourceType.VectorLine], optional=True,
+            defaultValue=camadaPadrao('hidrografia', 'linha')))
 
         self.addParameter(QgsProcessingParameterField(
             self.CAMPO_LARGURA, self.tr('Campo com a largura do curso d\'água (m)'),
@@ -122,25 +124,24 @@ class AppHidricaCAR(QgsProcessingAlgorithm):
 
         self.addParameter(QgsProcessingParameterMultipleLayers(
             self.INPUT_RIOS_POLIGONO,
-            self.tr("Rios de 10 m ou mais — leito em polígono (ex.: Rio_10_50m_50m)"),
-            layerType=poligono, optional=True))
+            self.tr("Rios — leito em polígono (ex.: Rio_10_50m_50m)"),
+            layerType=poligono, optional=True, defaultValue=camadasPadrao('rios_poligono') or None))
 
         self.addParameter(QgsProcessingParameterVectorLayer(
             self.INPUT_NASCENTES, self.tr('Nascentes e olhos d\'água (pontos)'),
-            [Qgis.ProcessingSourceType.VectorPoint], optional=True))
+            [Qgis.ProcessingSourceType.VectorPoint], optional=True,
+            defaultValue=camadaPadrao('nascentes', 'ponto')))
 
         self.addParameter(QgsProcessingParameterVectorLayer(
             self.INPUT_LAGOS, self.tr('Lagos e lagoas naturais (polígonos)'), [poligono],
-            optional=True))
+            optional=True, defaultValue=camadaPadrao('lagos')))
 
         self.addParameter(QgsProcessingParameterVectorLayer(
             self.INPUT_CONSOLIDADA, self.tr('Área rural consolidada até 22/07/2008 (opcional)'),
-            [poligono], optional=True))
+            [poligono], optional=True, defaultValue=camadaPadrao('consolidada')))
 
         for chave, rotulo in self.SAIDAS:
-            self.addParameter(QgsProcessingParameterFeatureSink(
-                chave, self.tr(rotulo), type=poligono, createByDefault=True, optional=True,
-                defaultValue=destinoPadrao(self.NOMES_SAIDAS[chave] + '.gpkg')))
+            adicionarSaida(self, chave, rotulo, self.NOMES_SAIDAS[chave], poligono)
 
         self.addOutput(QgsProcessingOutputNumber(self.OUTPUT_N_MODULOS, self.tr('Número de módulos fiscais')))
         self.addOutput(QgsProcessingOutputNumber(self.OUTPUT_AREA_INTEGRAL, self.tr('APP integral (ha)')))
@@ -223,11 +224,10 @@ class AppHidricaCAR(QgsProcessingAlgorithm):
         }
         resultados = {}
         for chave, (nome, geom) in geometrias.items():
-            if parameters.get(chave) is None:
-                continue
-            resultados[chave] = gravarCamadaNoSink(self, parameters, chave, context,
-                                                   camadaPoligonoArea(nome, srcTrabalho, geom),
-                                                   self.NOMES_SAIDAS[chave])
+            idSaida = gravarResultado(self, parameters, chave, context, feedback,
+                                      camadaPoligonoArea(nome, srcTrabalho, geom), self.NOMES_SAIDAS[chave])
+            if idSaida:
+                resultados[chave] = idSaida
 
         feedback.pushInfo(self.tr(f'APP integral: {area_ha(resultado["app_integral"]):.4f} ha'))
         feedback.pushInfo(self.tr(f'APP a preservar/recompor: {areaRecompor:.4f} ha'))
@@ -249,6 +249,10 @@ class AppHidricaCAR(QgsProcessingAlgorithm):
             self.OUTPUT_LIMITE_61B: round(limite61b, 4) if limite61b is not None else -1,
         })
         return resultados
+
+    def flags(self):
+        # Grava nas camadas fixas do projeto: precisa rodar na thread principal
+        return super().flags() | Qgis.ProcessingAlgorithmFlag.NoThreading
 
     def name(self):
         return 'apphidricacar'
@@ -291,5 +295,6 @@ class AppHidricaCAR(QgsProcessingAlgorithm):
 Com a camada de <b>área consolidada</b>, separa o que deve ser recomposto do uso que pode ser mantido e verifica o <b>teto do art. 61-B</b> (10% até 2 MF; 20% de 2 a 4 MF).
 
 A hidrografia linear é tratada como eixo: a faixa é medida da borda do leito regular (largura/2). Complementa a ferramenta <b>APP altitude, declividade e uso restrito</b>.
+<b>Estrutura RAIZ:</b> se o projeto tem as camadas fixas do <b>PreAnalise.gpkg</b>, os resultados vão direto para as camadas do grupo <b>Resultados da Pré-Análise</b>, apagando os anteriores; as saídas desta tela viram cópias opcionais. As entradas já vêm preenchidas com as camadas da RAIZ.
 """ + avisoLegal()
         return txt + rodapeAjuda()

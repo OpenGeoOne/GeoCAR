@@ -44,7 +44,8 @@ from qgis.core import (
     QgsVectorLayer,
 )
 
-from .nucleoCAR.processingCAR import avisoLegal, destinoPadrao, gravarCamadaNoSink, rodapeAjuda
+from .nucleoCAR.processingCAR import (adicionarSaida, avisoLegal, camadaPadrao, camadasPadrao, gravarResultado,
+                                      rodapeAjuda)
 from .nucleoCAR.sobreposicao import (CLASSE_RELEVANTE, LARGURA_DIVISA_PADRAO, PERC_DIVISA_PADRAO,
                                      analisar_sobreposicoes)
 from .nucleoCAR.utils import (adicionar_feicao, area_ha, criar_camada_memoria,
@@ -71,19 +72,21 @@ class ValidacaoSobreposicoesCAR(QgsProcessingAlgorithm):
         poligono = Qgis.ProcessingSourceType.VectorPolygon
 
         self.addParameter(QgsProcessingParameterVectorLayer(
-            self.INPUT_ATI, self.tr('Área Total do Imóvel (ATI)'), [poligono], defaultValue='ATI'))
+            self.INPUT_ATI, self.tr('Área Total do Imóvel (ATI)'), [poligono],
+            defaultValue=camadaPadrao('ati') or 'ATI'))
 
         self.addParameter(QgsProcessingParameterMultipleLayers(
             self.INPUT_RESTRICOES,
             self.tr('Camadas de restrição (CARs vizinhos, SIGEF, UC, TI, assentamentos, embargos)'),
-            layerType=poligono, optional=True))
+            layerType=poligono, optional=True, defaultValue=camadasPadrao('restricoes') or None))
 
         self.addParameter(QgsProcessingParameterVectorLayer(
-            self.INPUT_VEGETACAO, self.tr('Vegetação nativa (opcional)'), [poligono], optional=True))
+            self.INPUT_VEGETACAO, self.tr('Vegetação nativa (opcional)'), [poligono], optional=True,
+            defaultValue=camadaPadrao('vegetacao')))
 
         self.addParameter(QgsProcessingParameterVectorLayer(
             self.INPUT_CONSOLIDADA, self.tr('Área rural consolidada (opcional)'), [poligono],
-            optional=True))
+            optional=True, defaultValue=camadaPadrao('consolidada')))
 
         self.addParameter(QgsProcessingParameterNumber(
             self.LARGURA_DIVISA, self.tr('Ajuste de divisa: largura média máxima da faixa (m)'),
@@ -93,14 +96,9 @@ class ValidacaoSobreposicoesCAR(QgsProcessingAlgorithm):
             type=Qgis.ProcessingNumberParameterType.Double, minValue=0.0, maxValue=100.0,
             defaultValue=PERC_DIVISA_PADRAO))
 
-        self.addParameter(QgsProcessingParameterFeatureSink(
-            self.OUTPUT_PROBLEMAS, self.tr('Problemas de validação'),
-            type=Qgis.ProcessingSourceType.VectorPoint, createByDefault=True,
-            defaultValue=destinoPadrao('3a_problemas.gpkg')))
-
-        self.addParameter(QgsProcessingParameterFeatureSink(
-            self.OUTPUT_SOBREPOSICOES, self.tr('Sobreposições'),
-            type=poligono, createByDefault=True, defaultValue=destinoPadrao('3a_sobreposicoes.gpkg')))
+        adicionarSaida(self, self.OUTPUT_PROBLEMAS, 'Problemas de validação', '3a_problemas',
+                       Qgis.ProcessingSourceType.VectorPoint)
+        adicionarSaida(self, self.OUTPUT_SOBREPOSICOES, 'Sobreposições', '3a_sobreposicoes', poligono)
 
         self.addOutput(QgsProcessingOutputNumber(self.OUTPUT_N_PROBLEMAS,
                                                  self.tr('Número de problemas')))
@@ -164,10 +162,10 @@ class ValidacaoSobreposicoesCAR(QgsProcessingAlgorithm):
                               round(item['area_ha'], 4), round(item['percentual'], 2),
                               round(item['largura_m'], 2)])
 
-        idProblemas = gravarCamadaNoSink(self, parameters, self.OUTPUT_PROBLEMAS, context, camadaProblemas,
-                                         '3a_problemas')
-        idSobreposicoes = gravarCamadaNoSink(self, parameters, self.OUTPUT_SOBREPOSICOES, context,
-                                             camadaSobreposicoes, '3a_sobreposicoes')
+        idProblemas = gravarResultado(self, parameters, self.OUTPUT_PROBLEMAS, context, feedback,
+                                      camadaProblemas, '3a_problemas')
+        idSobreposicoes = gravarResultado(self, parameters, self.OUTPUT_SOBREPOSICOES, context, feedback,
+                                          camadaSobreposicoes, '3a_sobreposicoes')
 
         # Resumo no log
         areaSobreposta = sum(item['area_ha'] for item in sobreposicoes)
@@ -191,13 +189,17 @@ class ValidacaoSobreposicoesCAR(QgsProcessingAlgorithm):
             feedback.pushInfo(self.tr('Nenhum problema geométrico ou sobreposição encontrado.'))
         feedback.pushInfo(self.tr('GeoCAR - GeoOne'))
 
-        return {
-            self.OUTPUT_PROBLEMAS: idProblemas,
-            self.OUTPUT_SOBREPOSICOES: idSobreposicoes,
+        resultados = {chave: valor for chave, valor in ((self.OUTPUT_PROBLEMAS, idProblemas),
+                                                         (self.OUTPUT_SOBREPOSICOES, idSobreposicoes)) if valor}
+        return dict(resultados, **{
             self.OUTPUT_N_PROBLEMAS: len(problemas),
             self.OUTPUT_AREA_SOBREPOSTA: round(areaSobreposta, 4),
             self.OUTPUT_AREA_RELEVANTE: round(areaRelevante, 4),
-        }
+        })
+
+    def flags(self):
+        # Grava nas camadas fixas do projeto: precisa rodar na thread principal
+        return super().flags() | Qgis.ProcessingAlgorithmFlag.NoThreading
 
     def name(self):
         return 'validacaosobreposicoescar'
@@ -241,5 +243,6 @@ class ValidacaoSobreposicoesCAR(QgsProcessingAlgorithm):
 • <b>Sobreposição relevante</b> — demais casos: conflito de área (CAR duplicado, matrícula-mãe e desmembramentos, posse e propriedade declaradas em CARs diferentes).
 
 Os cálculos são feitos em <b>SIRGAS 2000 / UTM</b> do fuso do imóvel, escolhido automaticamente.
+<b>Estrutura RAIZ:</b> se o projeto tem as camadas fixas do <b>PreAnalise.gpkg</b>, os resultados vão direto para as camadas do grupo <b>Resultados da Pré-Análise</b>, apagando os anteriores; as saídas desta tela viram cópias opcionais. As entradas já vêm preenchidas com as camadas da RAIZ.
 """ + avisoLegal()
         return txt + rodapeAjuda()

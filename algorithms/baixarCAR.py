@@ -31,7 +31,7 @@ from qgis.core import *
 import os
 from qgis.PyQt.QtGui import QIcon
 
-from .nucleoCAR.processingCAR import PosProcessamentoGrupo, prepararDestino
+from .nucleoCAR.processingCAR import PosProcessamentoGrupo, camadaFixa, prepararDestino, substituirFeicoes
 
 # Resultado da Consulta CAR na estrutura RAIZ
 NOME_VIZINHOS = 'CAR_Vizinhos_SICAR'
@@ -91,16 +91,27 @@ class baixarCAR(QgsProcessingAlgorithm):
             )
         )
 
-        # Destino padrão: pasta "Areas Vizinhas com CAR" do projeto (estrutura RAIZ), se o projeto estiver salvo
-        pastaProjeto = QgsProject.instance().homePath()
-        destinoPadrao = os.path.join(pastaProjeto, PASTA_VIZINHOS, NOME_VIZINHOS + '.shp') if pastaProjeto else None
-        self.addParameter(
-            QgsProcessingParameterFeatureSink(
-                self.OUTPUT,
-                self.tr('Resultado da consulta'),
-                defaultValue=destinoPadrao
+        if camadaFixa(NOME_VIZINHOS) is not None:
+            # RAIZ com a camada fixa CAR_Vizinhos_SICAR: o resultado vai para ela; a saída é só uma cópia opcional
+            self.addParameter(
+                QgsProcessingParameterFeatureSink(
+                    self.OUTPUT,
+                    self.tr(f'Resultado da consulta — cópia opcional (o resultado já vai para a camada {NOME_VIZINHOS})'),
+                    createByDefault=False,
+                    optional=True
+                )
             )
-        )
+        else:
+            # Destino padrão: pasta "Areas Vizinhas com CAR" do projeto, se o projeto estiver salvo
+            pastaProjeto = QgsProject.instance().homePath()
+            destinoPadrao = os.path.join(pastaProjeto, PASTA_VIZINHOS, NOME_VIZINHOS + '.shp') if pastaProjeto else None
+            self.addParameter(
+                QgsProcessingParameterFeatureSink(
+                    self.OUTPUT,
+                    self.tr('Resultado da consulta'),
+                    defaultValue=destinoPadrao
+                )
+            )
 
     def processAlgorithm(self, parameters, context, feedback):
 
@@ -170,19 +181,26 @@ class baixarCAR(QgsProcessingAlgorithm):
                 if camposUniao.indexFromName(campo.name()) < 0:
                     camposUniao.append(campo)
 
-        # Cria a pasta de destino e libera o arquivo de uma consulta anterior
-        prepararDestino(self.parameterAsOutputLayer(parameters, self.OUTPUT, context), context.project())
+        # Camada fixa da RAIZ (CAR_Vizinhos_SICAR em PreAnalise.gpkg): recebe o resultado, apagando o anterior
+        camadaVizinhos = camadaFixa(NOME_VIZINHOS, context.project())
+        memoria = QgsVectorLayer(f'MultiPolygon?crs={crsGeo.authid()}', NOME_VIZINHOS, 'memory')
+        memoria.dataProvider().addAttributes(camposUniao.toList())
+        memoria.updateFields()
 
-        (sink, dest_id) = self.parameterAsSink(
-            parameters,
-            self.OUTPUT,
-            context,
-            camposUniao,
-            QgsWkbTypes.MultiPolygon,
-            crsGeo
-        )
-        if sink is None:
-            raise QgsProcessingException(self.invalidSinkError(parameters, self.OUTPUT))
+        sink, dest_id = None, None
+        if parameters.get(self.OUTPUT) is not None or camadaVizinhos is None:
+            # Cria a pasta de destino e libera o arquivo de uma consulta anterior
+            prepararDestino(self.parameterAsOutputLayer(parameters, self.OUTPUT, context), context.project())
+            (sink, dest_id) = self.parameterAsSink(
+                parameters,
+                self.OUTPUT,
+                context,
+                camposUniao,
+                QgsWkbTypes.MultiPolygon,
+                crsGeo
+            )
+            if sink is None:
+                raise QgsProcessingException(self.invalidSinkError(parameters, self.OUTPUT))
 
         request = QgsFeatureRequest().setFilterRect(extensao)
         for uri, vlayer in camadasUf:
@@ -198,18 +216,30 @@ class baixarCAR(QgsProcessingAlgorithm):
                 novaFeicao.setGeometry(geometria)
                 for nomeCampo in nomesCampos:
                     novaFeicao[nomeCampo] = feature[nomeCampo]
-                if sink.addFeature(novaFeicao, QgsFeatureSink.FastInsert):
+                if sink is None or sink.addFeature(novaFeicao, QgsFeatureSink.FastInsert):
+                    memoria.dataProvider().addFeature(novaFeicao)
                     total += 1
                 else:
                     rejeitadas += 1
             nomeCamada = uri.split("typename='")[1].split("'")[0]
             feedback.pushInfo(f'{nomeCamada}: {total} imóvel(is)' + (f', {rejeitadas} rejeitado(s)' if rejeitadas else ''))
 
-        global renamer
-        renamer = Renamer(NOME_VIZINHOS)   # "CAR" no nome: ignorada na exportação
-        context.layerToLoadOnCompletionDetails(dest_id).setPostProcessor(renamer)
+        if camadaVizinhos is not None:
+            total = substituirFeicoes(camadaVizinhos, memoria)
+            feedback.pushInfo(f'{NOME_VIZINHOS}: {total} imóvel(is) gravado(s) na camada do projeto '
+                              '(os anteriores foram apagados).')
+        elif dest_id and context.willLoadLayerOnCompletion(dest_id):
+            global renamer
+            renamer = Renamer(NOME_VIZINHOS)   # "CAR" no nome: ignorada na exportação
+            context.layerToLoadOnCompletionDetails(dest_id).setPostProcessor(renamer)
 
-        return {self.OUTPUT: dest_id}
+        return {self.OUTPUT: dest_id} if dest_id else {}
+
+    def flags(self):
+        # Com a camada fixa no projeto, a gravação nela precisa da thread principal
+        if camadaFixa(NOME_VIZINHOS) is not None:
+            return super().flags() | Qgis.ProcessingAlgorithmFlag.NoThreading
+        return super().flags()
 
     def name(self):
         return 'baixarcar'
@@ -243,7 +273,7 @@ A ferramenta acessa automaticamente os serviços <b>WFS do SICAR</b> ou a base <
 • Camada – tipo de dado CAR a consultar  
 • Consultar base da GeoOne – utiliza o servidor GeoOne em vez do SICAR oficial
 <b>Resultado:</b>
-Os imóveis CAR encontrados na área selecionada são carregados como uma nova camada vetorial no projeto QGIS.
+Os imóveis CAR encontrados na área selecionada são gravados na camada <b>CAR_Vizinhos_SICAR</b>, no grupo <b>Areas_Vizinhas</b>. Na estrutura RAIZ com o <b>PreAnalise.gpkg</b>, vão direto para a camada fixa, apagando a consulta anterior; sem ele, a camada é gravada em <b>Areas Vizinhas com CAR/</b>.
 <b>Observação:</b>
 A área de consulta deve ser pequena (até aproximadamente 1°) para garantir desempenho adequado na consulta WFS.
 """

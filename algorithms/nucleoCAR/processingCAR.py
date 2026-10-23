@@ -5,10 +5,11 @@
 import os
 
 from qgis.PyQt.QtCore import QTimer
-from qgis.core import (QgsFeature, QgsFeatureSink, QgsLayerTreeGroup, QgsProcessingContext,
-                       QgsProcessingException, QgsProcessingLayerPostProcessorInterface, QgsProcessingUtils,
-                       QgsProject, QgsProviderRegistry, QgsVectorFileWriter, QgsCategorizedSymbolRenderer,
-                       QgsFillSymbol, QgsRendererCategory)
+from qgis.core import (QgsCategorizedSymbolRenderer, QgsCoordinateTransform, QgsFeature, QgsFeatureSink,
+                       QgsFillSymbol, QgsGeometry, QgsLayerTreeGroup, QgsMapLayer, QgsProcessingContext,
+                       QgsProcessingException, QgsProcessingLayerPostProcessorInterface,
+                       QgsProcessingParameterFeatureSink, QgsProcessingUtils, QgsProject, QgsProviderRegistry,
+                       QgsRendererCategory, QgsVectorFileWriter, QgsWkbTypes)
 
 from .utils import adicionar_feicao, area_ha, criar_camada_memoria
 
@@ -24,6 +25,130 @@ VALORES_RL = [20.0, 35.0, 80.0]
 # Resultados da pré-análise na estrutura RAIZ
 PASTA_RESULTADOS = 'Pre-Analise'
 GRUPO_RESULTADOS = 'Resultados da Pré-Análise'
+
+# Camadas fixas da estrutura RAIZ (vazias no modelo) ficam neste GeoPackage, fora do GeoCAR*.gpkg
+ARQUIVO_FIXO = 'PreAnalise.gpkg'
+
+# Nomes de camada usados nas 5 RAIZ, para preencher as entradas automaticamente
+CANDIDATOS = {
+    'ati': ['Area_Imovel', 'Area_Total_Imovel', 'ATI', 'ATP'],
+    'vegetacao': ['Vegetacao_Nativa', 'Remanescente_Vegetacao_Nativa', 'AVN'],
+    'consolidada': ['Area_Consolidada', 'AREA_CONSOLIDADA', 'AC'],
+    'hidrografia': ['Rio_Menor_10m_30m', 'Curso_Agua_Natural_Perene_ou_Intermitente_Largura_inf_10m'],
+    'rios_poligono': ['RIO_MENOR_10', 'RIO_ATE_10',
+                      'Rio_10_50m_50m', 'Rio_50_200m_100m', 'Rio_200_600m_200m', 'Rio_Maior_600m_500m',
+                      'RIO_10_A_50', 'RIO_50_A_200', 'RIO_200_A_600', 'RIO_ACIMA_600',
+                      'Curso_Agua_Natural_Perene_ou_Intermitente_Largura_10_a_50m',
+                      'Curso_Agua_Natural_Perene_ou_Intermitente_Largura_51_a_200m',
+                      'Curso_Agua_Natural_Perene_ou_Intermitente_Largura_201_a_600m',
+                      'Curso_Agua_Natural_Perene_ou_Intermitente_Largura_sup_600m'],
+    'nascentes': ['Nascente_50m', 'NASCENTE', 'Nascente_ou_Olho_de_Agua_Perene'],
+    'lagos': ['Lago_Lagoa_Natural_50m', 'LAGO_LAGOA_NATURAL', 'LAGOA_NATURAL', 'Lago_ou_Lagoa_Natural'],
+    'restricoes': ['CAR_Vizinhos_SICAR'],
+}
+TIPOS_GEOMETRIA = {'ponto': QgsWkbTypes.PointGeometry, 'linha': QgsWkbTypes.LineGeometry,
+                   'poligono': QgsWkbTypes.PolygonGeometry}
+
+
+def camadasPadrao(chave, tipo='poligono'):
+    """Nomes das camadas do projeto atual que correspondem à chave (na ordem de CANDIDATOS)."""
+    projeto = QgsProject.instance()
+    nomes = []
+    for nome in CANDIDATOS[chave]:
+        for camada in projeto.mapLayersByName(nome):
+            if (camada.type() == QgsMapLayer.VectorLayer
+                    and QgsWkbTypes.geometryType(camada.wkbType()) == TIPOS_GEOMETRIA[tipo]
+                    and nome not in nomes):
+                nomes.append(nome)
+    return nomes
+
+
+def camadaPadrao(chave, tipo='poligono'):
+    """Primeira camada do projeto atual que corresponde à chave, ou None."""
+    nomes = camadasPadrao(chave, tipo)
+    return nomes[0] if nomes else None
+
+
+def camadaFixa(nome, projeto=None):
+    """Camada fixa da RAIZ com esse nome, gravada no PreAnalise.gpkg do projeto, ou None."""
+    projeto = projeto or QgsProject.instance()
+    for camada in projeto.mapLayersByName(nome):
+        if camada.type() == QgsMapLayer.VectorLayer and camada.providerType() == 'ogr':
+            caminho = _arquivo(camada.source())
+            if caminho and os.path.basename(caminho).lower() == ARQUIVO_FIXO.lower():
+                return camada
+    return None
+
+
+def limparCamada(camada):
+    """Apaga todas as feições da camada (direto no provedor, sem modo de edição)."""
+    provedor = camada.dataProvider()
+    if not provedor.truncate():
+        provedor.deleteFeatures(list(camada.allFeatureIds()))
+
+
+def substituirFeicoes(destino, origem):
+    """
+    Apaga as feições da camada fixa e grava as da origem: campos pelo nome, geometria
+    reprojetada para o SRC do destino e convertida para multi quando necessário.
+    Retorna o número de feições gravadas.
+    """
+    limparCamada(destino)
+    transformacao = QgsCoordinateTransform(origem.crs(), destino.crs(), QgsProject.instance())
+    campos = destino.fields()
+    multi = QgsWkbTypes.isMultiType(destino.wkbType())
+    novas = []
+    for feicao in origem.getFeatures():
+        nova = QgsFeature(campos)
+        geometria = QgsGeometry(feicao.geometry())
+        if not geometria.isNull():
+            geometria.transform(transformacao)
+            if multi:
+                geometria.convertToMultiType()
+        nova.setGeometry(geometria)
+        for campo in origem.fields():
+            indice = campos.indexFromName(campo.name())
+            if indice >= 0 and campo.name().lower() != 'fid':
+                nova.setAttribute(indice, feicao[campo.name()])
+        novas.append(nova)
+    if novas and not destino.dataProvider().addFeatures(novas)[0]:
+        raise QgsProcessingException(f'Erro ao gravar na camada {destino.name()}.')
+    destino.updateExtents()
+    destino.triggerRepaint()
+    return len(novas)
+
+
+def adicionarSaida(algoritmo, chave, rotulo, nomeCamada, tipo):
+    """
+    Cria o parâmetro de saída. Com a camada fixa no projeto, a saída é opcional e vem desligada
+    (o resultado já vai para a camada fixa); sem ela, grava por padrão em Pre-Analise/<nomeCamada>.gpkg.
+    """
+    if camadaFixa(nomeCamada) is not None:
+        algoritmo.addParameter(QgsProcessingParameterFeatureSink(
+            chave, algoritmo.tr(f'{rotulo} — cópia opcional (o resultado já vai para a camada {nomeCamada})'),
+            type=tipo, createByDefault=False, optional=True))
+    else:
+        algoritmo.addParameter(QgsProcessingParameterFeatureSink(
+            chave, algoritmo.tr(rotulo), type=tipo, createByDefault=True, optional=True,
+            defaultValue=destinoPadrao(nomeCamada + '.gpkg')))
+
+
+def gravarResultado(algoritmo, parameters, chave, context, feedback, camadaMemoria, nomeCamada):
+    """
+    Grava o resultado na camada fixa da RAIZ (apagando as feições anteriores), se existir,
+    e no parâmetro de saída, se ele foi pedido. Retorna o id da saída ou None.
+    """
+    fixa = camadaFixa(nomeCamada, context.project())
+    if fixa is not None:
+        total = substituirFeicoes(fixa, camadaMemoria)
+        feedback.pushInfo(f'{nomeCamada}: {total} feição(ões) gravada(s) na camada do projeto '
+                          f'(as anteriores foram apagadas).')
+    if parameters.get(chave) is None:
+        return None
+    # Com camada fixa, a cópia não recebe o mesmo nome nem vai para o grupo, para não confundir
+    return gravarCamadaNoSink(algoritmo, parameters, chave, context, camadaMemoria,
+                              None if fixa is not None else nomeCamada)
+
 
 # Referências aos pós-processadores (o Processing não guarda a referência Python)
 _posProcessadores = {}

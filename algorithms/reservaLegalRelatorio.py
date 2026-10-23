@@ -47,8 +47,9 @@ from qgis.core import (
 )
 
 from .nucleoCAR import analise
-from .nucleoCAR.processingCAR import (OPCOES_RL, VALORES_RL, avisoLegal, destinoPadrao,
-                                      gravarECarregarResultado, rodapeAjuda)
+from .nucleoCAR.processingCAR import (OPCOES_RL, VALORES_RL, avisoLegal, camadaFixa, camadaPadrao,
+                                      camadasPadrao, destinoPadrao, gravarECarregarResultado, limparCamada,
+                                      rodapeAjuda, substituirFeicoes)
 from .nucleoCAR.sobreposicao import LARGURA_DIVISA_PADRAO, PERC_DIVISA_PADRAO
 
 
@@ -94,7 +95,8 @@ class ReservaLegalRelatorioCAR(QgsProcessingAlgorithm):
         decimal = Qgis.ProcessingNumberParameterType.Double
 
         self.addParameter(QgsProcessingParameterVectorLayer(
-            self.INPUT_ATI, self.tr('Área Total do Imóvel (ATI)'), [poligono], defaultValue='ATI'))
+            self.INPUT_ATI, self.tr('Área Total do Imóvel (ATI)'), [poligono],
+            defaultValue=camadaPadrao('ati') or 'ATI'))
         self.addParameter(QgsProcessingParameterNumber(
             self.MODULO_FISCAL, self.tr('Módulo fiscal do município (ha)'), type=decimal,
             minValue=0.01, defaultValue=20.0))
@@ -105,13 +107,15 @@ class ReservaLegalRelatorioCAR(QgsProcessingAlgorithm):
             self.PERCENTUAL_RL, self.tr('Percentual de Reserva Legal (art. 12)'),
             options=OPCOES_RL, defaultValue=0))
         self.addParameter(QgsProcessingParameterVectorLayer(
-            self.INPUT_VEGETACAO, self.tr('Vegetação nativa'), [poligono], optional=True))
+            self.INPUT_VEGETACAO, self.tr('Vegetação nativa'), [poligono], optional=True,
+            defaultValue=camadaPadrao('vegetacao')))
         self.addParameter(QgsProcessingParameterVectorLayer(
             self.INPUT_CONSOLIDADA, self.tr('Área rural consolidada até 22/07/2008'), [poligono],
-            optional=True))
+            optional=True, defaultValue=camadaPadrao('consolidada')))
         self.addParameter(QgsProcessingParameterVectorLayer(
             self.INPUT_HIDROGRAFIA, self.tr("Cursos d'água — eixo (linhas)"),
-            [Qgis.ProcessingSourceType.VectorLine], optional=True))
+            [Qgis.ProcessingSourceType.VectorLine], optional=True,
+            defaultValue=camadaPadrao('hidrografia', 'linha')))
         self.addParameter(QgsProcessingParameterField(
             self.CAMPO_LARGURA, self.tr("Campo com a largura do curso d'água (m)"),
             parentLayerParameterName=self.INPUT_HIDROGRAFIA,
@@ -121,17 +125,18 @@ class ReservaLegalRelatorioCAR(QgsProcessingAlgorithm):
             type=decimal, minValue=0.1, defaultValue=5.0))
         self.addParameter(QgsProcessingParameterMultipleLayers(
             self.INPUT_RIOS_POLIGONO,
-            self.tr("Rios de 10 m ou mais — leito em polígono (ex.: Rio_10_50m_50m)"),
-            layerType=poligono, optional=True))
+            self.tr("Rios — leito em polígono (ex.: Rio_10_50m_50m)"),
+            layerType=poligono, optional=True, defaultValue=camadasPadrao('rios_poligono') or None))
         self.addParameter(QgsProcessingParameterVectorLayer(
             self.INPUT_NASCENTES, self.tr("Nascentes e olhos d'água (pontos)"),
-            [Qgis.ProcessingSourceType.VectorPoint], optional=True))
+            [Qgis.ProcessingSourceType.VectorPoint], optional=True,
+            defaultValue=camadaPadrao('nascentes', 'ponto')))
         self.addParameter(QgsProcessingParameterVectorLayer(
             self.INPUT_LAGOS, self.tr('Lagos e lagoas naturais (polígonos)'), [poligono],
-            optional=True))
+            optional=True, defaultValue=camadaPadrao('lagos')))
         self.addParameter(QgsProcessingParameterMultipleLayers(
             self.INPUT_RESTRICOES, self.tr('Camadas de restrição (sobreposição)'),
-            layerType=poligono, optional=True))
+            layerType=poligono, optional=True, defaultValue=camadasPadrao('restricoes') or None))
         self.addParameter(QgsProcessingParameterNumber(
             self.LARGURA_DIVISA, self.tr('Ajuste de divisa: largura média máxima da faixa (m)'),
             type=Qgis.ProcessingNumberParameterType.Double, minValue=0.0, defaultValue=LARGURA_DIVISA_PADRAO))
@@ -146,7 +151,8 @@ class ReservaLegalRelatorioCAR(QgsProcessingAlgorithm):
         self.addParameter(QgsProcessingParameterBoolean(
             self.GERAR_CAMADAS,
             self.tr('Gerar também as camadas de resultado (as mesmas das ferramentas a e b)'),
-            defaultValue=False))
+            # Marcada quando a RAIZ tem as camadas fixas de resultado
+            defaultValue=camadaFixa('3a_sobreposicoes') is not None))
 
         self.addOutput(QgsProcessingOutputNumber(self.OUTPUT_RL_EXIGIDA, self.tr('RL exigida (ha)')))
         self.addOutput(QgsProcessingOutputNumber(self.OUTPUT_VEGETACAO, self.tr('Vegetação nativa (ha)')))
@@ -194,9 +200,19 @@ class ReservaLegalRelatorioCAR(QgsProcessingAlgorithm):
 
         # Camadas de resultado em Pre-Analise/, carregadas no grupo Resultados da Pré-Análise
         if self.parameterAsBool(parameters, self.GERAR_CAMADAS, context):
-            for camada in resultado['camadas']:
-                nome = self.CAMADAS_RESULTADO.get(camada.name())
-                if nome:
+            porNome = {self.CAMADAS_RESULTADO[c.name()]: c for c in resultado['camadas']
+                       if c.name() in self.CAMADAS_RESULTADO}
+            for nome in self.CAMADAS_RESULTADO.values():
+                fixa = camadaFixa(nome, context.project())
+                camada = porNome.get(nome)
+                if fixa is not None:
+                    # Camada fixa da RAIZ: apaga as feições anteriores (também quando o resultado é vazio)
+                    total = substituirFeicoes(fixa, camada) if camada is not None else 0
+                    if camada is None:
+                        limparCamada(fixa)
+                        fixa.triggerRepaint()
+                    feedback.pushInfo(self.tr(f'{nome}: {total} feição(ões) gravada(s) na camada do projeto.'))
+                elif camada is not None:
                     caminho = gravarECarregarResultado(context, camada, nome)
                     feedback.pushInfo(self.tr(f'Camada gravada: {caminho}'))
         rl = resumo['rl']
@@ -256,7 +272,7 @@ class ReservaLegalRelatorioCAR(QgsProcessingAlgorithm):
 • APP hídrica integral, faixa da escadinha e teto do art. 61-B
 • Reserva Legal
 
-Marque <b>Gerar também as camadas de resultado</b> para gravar em <b>Pre-Analise/</b> e carregar no grupo <b>Resultados da Pré-Análise</b> as mesmas camadas das ferramentas <b>a. Validação e sobreposições</b> e <b>b. APP hídrica e escadinha</b>.
+A opção <b>Gerar também as camadas de resultado</b> preenche as mesmas camadas das ferramentas <b>a</b> e <b>b</b>. Na estrutura RAIZ com o <b>PreAnalise.gpkg</b>, ela já vem marcada e grava nas camadas fixas do grupo <b>Resultados da Pré-Análise</b>, apagando os resultados anteriores; sem ele, grava em <b>Pre-Analise/</b>. As entradas já vêm preenchidas com as camadas da RAIZ.
 
 <b>Reserva Legal:</b>
 • RL exigida pelo percentual do art. 12 (20%, 35% ou 80%)
