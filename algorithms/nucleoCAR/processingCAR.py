@@ -249,6 +249,10 @@ def moverParaGrupo(projeto, idCamada, nomeGrupo):
     elif no.parent() is not grupo:
         grupo.addChildNode(no.clone())
         no.parent().removeChildNode(no)
+    # Contagem de feições no painel de camadas, como nas camadas da RAIZ
+    no = raiz.findLayer(idCamada)
+    if no is not None:
+        no.setCustomProperty('showFeatureCount', 1)
 
 
 def rodapeAjuda():
