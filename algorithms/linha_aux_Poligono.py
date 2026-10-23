@@ -68,7 +68,7 @@ class linha_aux_Poligono(QgsProcessingAlgorithm):
         return self.tr('a. Linha Auxiliar para Polígono')
 
     def group(self):
-        return self.tr('2. 📝 Preparação das camadas')
+        return self.tr('2. 📝 Preparação da camada')
 
     def groupId(self):
         return 'preparacao'
