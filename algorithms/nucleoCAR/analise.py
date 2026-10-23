@@ -94,6 +94,8 @@ def executar(p):
     resumo = {
         "data": datetime.now().strftime("%d/%m/%Y %H:%M"),
         "camada_perimetro": camada_perimetro.name(),
+        # Identificação opcional do trabalho (imóvel, município/UF, proprietário, responsável técnico)
+        "identificacao": p.get("identificacao") or {},
         "src": f"{src.authid()} — {src.description()}",
         "area_imovel_ha": area_imovel,
         "area_2008_ha": area_2008,

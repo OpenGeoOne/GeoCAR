@@ -67,7 +67,8 @@ def gerar_relatorio_html(r, caminho):
 
     # Dados do imóvel
     partes.append("<h2>1. Dados do imóvel</h2>")
-    partes.append(_tabela(["Item", "Valor"], [
+    identificacao = [[rotulo, valor] for rotulo, valor in (r.get("identificacao") or {}).items() if valor]
+    partes.append(_tabela(["Item", "Valor"], identificacao + [
         ["Área do imóvel (ha)", _n(r["area_imovel_ha"])],
         ["Área considerada em 22/07/2008 (ha)", _n(r["area_2008_ha"])],
         ["Módulo fiscal do município (ha)", _n(r["modulo_fiscal_ha"], 2)],

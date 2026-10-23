@@ -28,6 +28,7 @@ __date__ = '2026-10-23'
 __copyright__ = '(C) 2026 by Prof Cazaroli e Leandro França'
 
 import os
+from datetime import datetime
 
 from qgis.PyQt.QtCore import QCoreApplication
 from qgis.PyQt.QtGui import QIcon
@@ -42,6 +43,7 @@ from qgis.core import (
     QgsProcessingParameterFileDestination,
     QgsProcessingParameterMultipleLayers,
     QgsProcessingParameterNumber,
+    QgsProcessingParameterString,
     QgsProcessingParameterVectorLayer,
     QgsVectorLayer,
 )
@@ -73,6 +75,18 @@ class ReservaLegalRelatorioCAR(QgsProcessingAlgorithm):
     PERC_DIVISA = 'PERC_DIVISA'
     OUTPUT_HTML = 'OUTPUT_HTML'
     GERAR_CAMADAS = 'GERAR_CAMADAS'
+    IMOVEL = 'IMOVEL'
+    MUNICIPIO_UF = 'MUNICIPIO_UF'
+    PROPRIETARIO = 'PROPRIETARIO'
+    RESPONSAVEL = 'RESPONSAVEL'
+
+    # Identificação do trabalho no topo do relatório: parâmetro -> rótulo
+    IDENTIFICACAO = [
+        (IMOVEL, 'Imóvel'),
+        (MUNICIPIO_UF, 'Município/UF'),
+        (PROPRIETARIO, 'Proprietário/possuidor'),
+        (RESPONSAVEL, 'Responsável técnico (CREA/CFT)'),
+    ]
 
     # Camadas da análise -> nomes dos resultados da 3a e da 3b (o perímetro em UTM não é gravado)
     CAMADAS_RESULTADO = {
@@ -97,6 +111,9 @@ class ReservaLegalRelatorioCAR(QgsProcessingAlgorithm):
         self.addParameter(QgsProcessingParameterVectorLayer(
             self.INPUT_ATI, self.tr('Área Total do Imóvel (ATI)'), [poligono],
             defaultValue=camadaPadrao('ati') or 'ATI'))
+        for chave, rotulo in self.IDENTIFICACAO:
+            self.addParameter(QgsProcessingParameterString(
+                chave, self.tr(f'{rotulo} — no relatório (opcional)'), optional=True))
         self.addParameter(QgsProcessingParameterNumber(
             self.MODULO_FISCAL, self.tr('Módulo fiscal do município (ha)'), type=decimal,
             minValue=0.01, defaultValue=20.0))
@@ -147,7 +164,8 @@ class ReservaLegalRelatorioCAR(QgsProcessingAlgorithm):
         self.addParameter(QgsProcessingParameterFileDestination(
             self.OUTPUT_HTML, self.tr('Relatório de pré-análise (PDF ou HTML)'),
             fileFilter='PDF (*.pdf);;HTML (*.html)',
-            defaultValue=destinoPadrao('3c_relatorio_pre_analise.pdf')))
+            # Data no nome: cada dia de trabalho fica com o seu relatório
+            defaultValue=destinoPadrao(f"Pre-Analise_CAR_{datetime.now().strftime('%Y-%m-%d')}.pdf")))
         self.addParameter(QgsProcessingParameterBoolean(
             self.GERAR_CAMADAS,
             self.tr('Gerar também as camadas de resultado (as mesmas das ferramentas a e b)'),
@@ -188,6 +206,8 @@ class ReservaLegalRelatorioCAR(QgsProcessingAlgorithm):
             'largura_divisa': self.parameterAsDouble(parameters, self.LARGURA_DIVISA, context),
             'perc_divisa': self.parameterAsDouble(parameters, self.PERC_DIVISA, context),
             'caminho_relatorio': caminhoHtml,
+            'identificacao': {rotulo: self.parameterAsString(parameters, chave, context).strip()
+                              for chave, rotulo in self.IDENTIFICACAO},
         }
 
         feedback.pushInfo(self.tr('Executando a pré-análise completa (validação, sobreposições, APP e RL)...'))
