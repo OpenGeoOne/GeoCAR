@@ -59,7 +59,7 @@ class preparaCAR_ZIP_GO(QgsProcessingAlgorithm):
         return 'GeoOne,GeoCAR,GeoRural,ambiental,APP,SiCAR,Goias,Goiania,Cerrado,SIGCAR,murundus,compactar,ZIP'.split(',')
 
     def icon(self):
-        return QIcon(os.path.join(os.path.dirname(os.path.dirname(__file__)), 'images/geocar.png'))
+        return QIcon(os.path.join(os.path.dirname(os.path.dirname(__file__)), 'images/geoincra_pb.png'))
 
     def shortHelpString(self):
         txt = """Gera um <b>arquivo ZIP único</b> contendo todas as camadas que possuem feição, necessárias para envio ao <b>Sistema do Cadastro Ambiental Rural (CAR) do Estado de Goiás</b>.

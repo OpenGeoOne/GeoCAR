@@ -71,7 +71,7 @@ class preparaCAR_KML(QgsProcessingAlgorithm):
         return 'GeoOne,GeoCAR,GeoRural,ambiental,APP,SiCAR,KML,KMZ,Google,Earth'.split(',')
 
     def icon(self):
-        return QIcon(os.path.join(os.path.dirname(os.path.dirname(__file__)), 'images/geocar.png'))
+        return QIcon(os.path.join(os.path.dirname(os.path.dirname(__file__)), 'images/geoincra_pb.png'))
 
     def shortHelpString(self):
         txt = """Exporta automaticamente as camadas vetoriais do projeto para arquivos <b>KML</b>, permitindo visualizar os dados do <b>Cadastro Ambiental Rural (CAR)</b> no <b>Google Earth</b>

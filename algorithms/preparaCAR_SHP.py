@@ -65,7 +65,7 @@ class preparaCAR_SHP(QgsProcessingAlgorithm):
         return 'GeoOne,GeoCAR,GeoRural,ambiental,APP,SiCAR,shp,shapefile'.split(',')
 
     def icon(self):
-        return QIcon(os.path.join(os.path.dirname(os.path.dirname(__file__)), 'images/geocar.png'))
+        return QIcon(os.path.join(os.path.dirname(os.path.dirname(__file__)), 'images/geoincra_pb.png'))
 
     def shortHelpString(self):
         txt = """Exporta automaticamente as camadas vetoriais do projeto para arquivos <b>Shapefile</b>, no formato utilizado para importação no <b>Aplicativo do Cadastro Ambiental Rural (CAR)</b>.
