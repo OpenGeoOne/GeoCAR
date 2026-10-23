@@ -1,0 +1,54 @@
+{
+  "_comentario": "Endereços dos serviços oficiais usados pela ferramenta 1c. Se um endereço mudar, basta editar este arquivo. servico: wfs_cnuc (WFS do MMA, escolhe a camada CNUC mais recente), wfs ou arcgis (FeatureServer/MapServer do ArcGIS). campos: candidatos, na ordem; o primeiro preenchido é usado. alternativas: usadas só se o serviço principal falhar.",
+  "fontes": [
+    {
+      "tipo": "Unidade de Conservação",
+      "servico": "wfs_cnuc",
+      "url": "https://geoservicos.inde.gov.br/geoserver/MMA/ows",
+      "prefixo": "MMA:cnuc_",
+      "fonte": "MMA — CNUC",
+      "campos": {"nome": ["nome_uc"], "codigo": ["cd_cnuc", "uc_id"], "situacao": ["grupo", "categoria", "esfera"], "data": ["cria_ano"]},
+      "alternativas": [
+        {"servico": "arcgis", "url": "https://pamgia.ibama.gov.br/server/rest/services/01_Publicacoes_Bases/lim_unidade_conservacao_a/FeatureServer/13",
+         "fonte": "ICMBio (via IBAMA)", "campos": {"nome": ["nome"], "codigo": ["codigocnuc"], "situacao": ["siglagrupo"], "data": ["anocriacao"]}},
+        {"servico": "arcgis", "url": "https://pamgia.ibama.gov.br/server/rest/services/01_Publicacoes_Bases/lim_unidade_conservacao_est_a/FeatureServer/14",
+         "fonte": "SFB (via IBAMA)", "campos": {"nome": ["nome"], "codigo": ["codigo"], "situacao": ["protecao", "categoria"], "data": ["anocriacao", "ano"]}}
+      ]
+    },
+    {
+      "tipo": "Terra Indígena",
+      "servico": "arcgis",
+      "url": "https://pamgia.ibama.gov.br/server/rest/services/01_Publicacoes_Bases/lim_terra_indigena_a/FeatureServer/12",
+      "fonte": "FUNAI (via IBAMA)",
+      "campos": {"nome": ["terrai_nom"], "codigo": ["terrai_cod"], "situacao": ["fase_ti", "modalidade"], "data": []}
+    },
+    {
+      "tipo": "Assentamento (INCRA)",
+      "servico": "arcgis",
+      "url": "https://pamgia.ibama.gov.br/server/rest/services/01_Publicacoes_Bases/assentamentos_incra/FeatureServer/1",
+      "fonte": "INCRA (via IBAMA)",
+      "campos": {"nome": ["nome_proje"], "codigo": ["cd_sipra"], "situacao": ["fase"], "data": ["data_de_cr"]}
+    },
+    {
+      "tipo": "Embargo IBAMA",
+      "servico": "arcgis",
+      "url": "https://pamgia.ibama.gov.br/server/rest/services/01_Publicacoes_Bases/adm_embargos_ibama_a/FeatureServer/0",
+      "fonte": "IBAMA",
+      "campos": {"nome": ["num_tad"], "codigo": ["serie_tad"], "situacao": ["sit_desmatamento", "tipo_area"], "data": ["dat_embargo"]}
+    },
+    {
+      "tipo": "Embargo ICMBio",
+      "servico": "arcgis",
+      "url": "https://pamgia.ibama.gov.br/server/rest/services/01_Publicacoes_Bases/adm_embargo_icmbio_a/FeatureServer/0",
+      "fonte": "ICMBio (via IBAMA)",
+      "campos": {"nome": ["numero_ai"], "codigo": ["serie"], "situacao": ["tipo_infra", "nome_uc"], "data": ["data_embar", "dt_embargo"]}
+    },
+    {
+      "tipo": "Floresta Pública (SFB)",
+      "servico": "arcgis",
+      "url": "https://pamgia.ibama.gov.br/server/rest/services/01_Publicacoes_Bases/lim_floresta_publica_a/FeatureServer/8",
+      "fonte": "SFB (via IBAMA)",
+      "campos": {"nome": ["nome"], "codigo": ["codigo"], "situacao": ["classe", "categoria"], "data": ["anocriacao", "ano"]}
+    }
+  ]
+}

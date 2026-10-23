@@ -14,6 +14,7 @@ from qgis.core import QgsGeometry
 from . import app as modulo_app
 from .relatorio import gerar_relatorio_html
 from .reserva_legal import calcular_rl
+from .consistencia import verificar_consistencia
 from .sobreposicao import LARGURA_DIVISA_PADRAO, PERC_DIVISA_PADRAO, analisar_sobreposicoes
 from .utils import adicionar_feicao, area_ha, criar_camada_memoria, src_utm_sirgas, uniao
 from .validacao import validar_perimetro, verificar_extrapolacao
@@ -61,6 +62,10 @@ def executar(p):
     sobreposicoes = analisar_sobreposicoes(perimetro, area_imovel, p["restricoes"], src,
                                            largura_divisa, perc_divisa)
 
+    # --- 2b. Consistência entre camadas (coberturas, Reserva Legal e servidões) ---
+    consistencia = verificar_consistencia(perimetro, src, p["vegetacao"], p.get("coberturas") or [],
+                                          p.get("reservas") or [], p.get("servidoes") or [])
+
     # --- 3. APP ---
     res_app = modulo_app.calcular_app(
         perimetro, src, n_modulos,
@@ -89,6 +94,14 @@ def executar(p):
     # --- 5. Camadas de resultado ---
     camadas = _criar_camadas(src, perimetro, area_imovel, n_modulos, problemas,
                              sobreposicoes, res_app)
+    if consistencia:
+        c_inc = criar_camada_memoria("Inconsistências", "MultiPolygon", src,
+                                     [("gravidade", "string"), ("tipo", "string"), ("camadas", "string"),
+                                      ("area_ha", "double"), ("descricao", "string")])
+        for item in consistencia:
+            adicionar_feicao(c_inc, item["geometria"], [item["gravidade"], item["tipo"], item["camadas"],
+                                                        round(item["area_ha"], 4), item["descricao"]])
+        camadas.append(c_inc)
 
     # --- 6. Relatório ---
     resumo = {
@@ -106,6 +119,8 @@ def executar(p):
         "problemas": problemas,
         "sobreposicoes": sobreposicoes,
         "criterio_divisa": (largura_divisa, perc_divisa),
+        "consistencia": consistencia,
+        "consistencia_verificada": bool(p.get("coberturas") or p.get("reservas") or p.get("servidoes")),
         "app": {
             "detalhes": res_app["detalhes"],
             "avisos": res_app["avisos"],

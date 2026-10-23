@@ -92,17 +92,22 @@ def gerar_relatorio_html(r, caminho):
     if r["sobreposicoes"]:
         largura_divisa, perc_divisa = r.get("criterio_divisa", (15.0, 2.0))
         relevantes = [s for s in r["sobreposicoes"] if s["classe"] == "Sobreposição relevante"]
-        divisas = [s for s in r["sobreposicoes"] if s["classe"] != "Sobreposição relevante"]
+        divisas = [s for s in r["sobreposicoes"] if s["classe"] == "Ajuste de divisa"]
+        informativas = [s for s in r["sobreposicoes"] if s["classe"].startswith("Informativa")]
         if relevantes:
             partes.append(f"<p class='alerta'>Sobreposição relevante: {_n(sum(s['area_ha'] for s in relevantes))} ha "
-                          f"em {len(relevantes)} feição(ões) — conflito de área a resolver antes do envio "
-                          f"(verificar matrícula, posse, CAR duplicado ou desmembramento).</p>")
+                          f"em {len(relevantes)} feição(ões) — a resolver antes do envio (com CAR vizinho: verificar matrícula, "
+                          f"posse, CAR duplicado ou desmembramento; com UC, Terra Indígena, assentamento, embargo "
+                          f"ou floresta pública: verificar a restrição no órgão responsável).</p>")
         else:
             partes.append("<p class='ok'>Nenhuma sobreposição relevante.</p>")
         if divisas:
             partes.append(f"<p>Ajuste de divisa: {_n(sum(s['area_ha'] for s in divisas))} ha em {len(divisas)} "
                           f"feição(ões) — faixas estreitas ao longo do limite, típicas de digitalização "
                           f"sobre imagens diferentes.</p>")
+        if informativas:
+            partes.append(f"<p>Informativa: imóvel em {len(informativas)} Área(s) de Proteção Ambiental (APA) — "
+                          f"a APA admite propriedade privada; observar as regras do plano de manejo.</p>")
         partes.append(_tabela(
             ["Camada", "Identificador", "Classe", "Área (ha)", "% do imóvel", "Larg. média (m)"],
             [[s["camada"], s["identificador"] or f"fid {s['feicao']}", s["classe"],
@@ -171,6 +176,21 @@ def gerar_relatorio_html(r, caminho):
     for obs in rl["observacoes"]:
         partes.append(f"<div class='aviso'>{escape(obs)}</div>")
 
+    # Consistência entre camadas
+    if r.get("consistencia_verificada") or r.get("consistencia"):
+        partes.append("<h2>6. Consistência entre camadas</h2>")
+        itens = r.get("consistencia") or []
+        erros = [i for i in itens if i["gravidade"] == "Erro"]
+        if not itens:
+            partes.append("<p class='ok'>Nenhuma inconsistência entre as camadas declaradas.</p>")
+        else:
+            if erros:
+                partes.append(f"<p class='alerta'>{len(erros)} erro(s) entre as camadas — corrigir antes da "
+                              f"importação no SICAR.</p>")
+            partes.append(_tabela(["Gravidade", "Tipo", "Camadas", "Área (ha)"],
+                                  [[i["gravidade"], i["tipo"], i["camadas"], _n(i["area_ha"])] for i in itens],
+                                  colunas_num=(3,)))
+
     partes.append(
         "<p class='nota'>Pré-análise técnica automatizada, de caráter indicativo. Não substitui "
         "a análise do órgão ambiental competente nem a verificação da legislação estadual, que "
@@ -184,6 +204,41 @@ def gerar_relatorio_html(r, caminho):
     with open(caminho, "w", encoding="utf-8") as arq:
         arq.write(html)
     return caminho
+
+
+def _evitarTabelasQuebradas(documento, alturaPagina):
+    """
+    Se uma tabela cair entre duas páginas, começa nova página no título da seção (h2) dela,
+    para manter título e tabela juntos. Repete até não haver tabela quebrada (máx. 10 vezes).
+    """
+    from qgis.PyQt.QtGui import QTextCursor, QTextFormat, QTextTable
+
+    sempreAntes = getattr(getattr(QTextFormat, 'PageBreakFlag', QTextFormat), 'PageBreak_AlwaysBefore')
+    for _ in range(10):
+        layout = documento.documentLayout()
+        alterou = False
+        for quadro in documento.rootFrame().childFrames():
+            if not isinstance(quadro, QTextTable):
+                continue
+            retangulo = layout.frameBoundingRect(quadro)
+            if retangulo.height() >= alturaPagina:
+                continue   # maior que uma página: não há como evitar
+            if int(retangulo.top() // alturaPagina) == int((retangulo.bottom() - 1) // alturaPagina):
+                continue
+            # Título (h2) da seção da tabela
+            bloco = documento.findBlock(quadro.firstPosition()).previous()
+            while bloco.isValid() and bloco.blockFormat().headingLevel() != 2:
+                bloco = bloco.previous()
+            if not bloco.isValid() or bloco.blockFormat().pageBreakPolicy() & sempreAntes:
+                continue
+            cursor = QTextCursor(bloco)
+            formato = bloco.blockFormat()
+            formato.setPageBreakPolicy(sempreAntes)
+            cursor.setBlockFormat(formato)
+            alterou = True
+            break
+        if not alterou:
+            return
 
 
 def _salvar_pdf(html, caminho):
@@ -213,6 +268,7 @@ def _salvar_pdf(html, caminho):
     documento.setHtml(html)
     areaUtil = impressora.pageLayout().paintRectPixels(impressora.resolution())
     documento.setPageSize(QSizeF(areaUtil.width(), areaUtil.height()))
+    _evitarTabelasQuebradas(documento, areaUtil.height())
     imprimir = getattr(documento, "print", None) or getattr(documento, "print_")   # Qt6 / Qt5
     imprimir(impressora)
     return caminho

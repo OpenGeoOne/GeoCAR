@@ -76,6 +76,9 @@ class ReservaLegalRelatorioCAR(QgsProcessingAlgorithm):
     PERC_DIVISA = 'PERC_DIVISA'
     OUTPUT_HTML = 'OUTPUT_HTML'
     GERAR_CAMADAS = 'GERAR_CAMADAS'
+    INPUT_COBERTURAS = 'INPUT_COBERTURAS'
+    INPUT_RESERVAS = 'INPUT_RESERVAS'
+    INPUT_SERVIDOES = 'INPUT_SERVIDOES'
     IMOVEL = 'IMOVEL'
     MUNICIPIO_UF = 'MUNICIPIO_UF'
     PROPRIETARIO = 'PROPRIETARIO'
@@ -98,6 +101,7 @@ class ReservaLegalRelatorioCAR(QgsProcessingAlgorithm):
         'APP a recompor em área consolidada': '3b_APP_recompor_consolidada',
         'Uso consolidado mantido em APP': '3b_uso_consolidado_em_APP',
         'APP fora de área consolidada': '3b_APP_fora_consolidada',
+        'Inconsistências': '3d_inconsistencias',
     }
 
     OUTPUT_RL_EXIGIDA = 'OUTPUT_RL_EXIGIDA'
@@ -162,6 +166,16 @@ class ReservaLegalRelatorioCAR(QgsProcessingAlgorithm):
             self.PERC_DIVISA, self.tr('Ajuste de divisa: área máxima (% do imóvel)'),
             type=Qgis.ProcessingNumberParameterType.Double, minValue=0.0, maxValue=100.0,
             defaultValue=PERC_DIVISA_PADRAO))
+        # Consistência entre camadas (mesma verificação da ferramenta d), em parâmetros avançados
+        for chave, rotulo, candidatos in (
+                (self.INPUT_COBERTURAS, 'Consistência: outras coberturas do solo (área consolidada, pousio...)', 'coberturas'),
+                (self.INPUT_RESERVAS, 'Consistência: Reserva Legal', 'reservas'),
+                (self.INPUT_SERVIDOES, 'Consistência: servidão administrativa (polígonos)', 'servidoes')):
+            parametro = QgsProcessingParameterMultipleLayers(
+                chave, self.tr(rotulo), layerType=poligono, optional=True,
+                defaultValue=camadasPadrao(candidatos) or None)
+            parametro.setFlags(parametro.flags() | Qgis.ProcessingParameterFlag.Advanced)
+            self.addParameter(parametro)
         self.addParameter(QgsProcessingParameterFileDestination(
             self.OUTPUT_HTML, self.tr('Relatório de pré-análise (PDF ou HTML)'),
             fileFilter='PDF (*.pdf);;HTML (*.html)',
@@ -210,6 +224,12 @@ class ReservaLegalRelatorioCAR(QgsProcessingAlgorithm):
             'largura_divisa': self.parameterAsDouble(parameters, self.LARGURA_DIVISA, context),
             'perc_divisa': self.parameterAsDouble(parameters, self.PERC_DIVISA, context),
             'modulo_automatico': self.parameterAsDouble(parameters, self.MODULO_FISCAL, context) <= 0,
+            'coberturas': [c for c in self.parameterAsLayerList(parameters, self.INPUT_COBERTURAS, context)
+                           if isinstance(c, QgsVectorLayer)],
+            'reservas': [c for c in self.parameterAsLayerList(parameters, self.INPUT_RESERVAS, context)
+                         if isinstance(c, QgsVectorLayer)],
+            'servidoes': [c for c in self.parameterAsLayerList(parameters, self.INPUT_SERVIDOES, context)
+                          if isinstance(c, QgsVectorLayer)],
             'caminho_relatorio': caminhoHtml,
             'identificacao': {rotulo: self.parameterAsString(parameters, chave, context).strip()
                               for chave, rotulo in self.IDENTIFICACAO},
@@ -293,11 +313,12 @@ class ReservaLegalRelatorioCAR(QgsProcessingAlgorithm):
 
     def shortHelpString(self):
         txt = """Executa <b>de uma vez</b> a pré-análise completa do CAR e gera um <b>relatório em PDF ou HTML</b> (escolha pela extensão do arquivo de saída):
-• validação geométrica da ATI e sobreposições (ajuste de divisa ou relevante)
+• validação geométrica da ATI e sobreposições (relevante, ajuste de divisa ou informativa/APA)
+• consistência entre camadas (coberturas do solo, Reserva Legal e servidões — parâmetros avançados)
 • APP hídrica integral, faixa da escadinha e teto do art. 61-B
 • Reserva Legal
 
-A opção <b>Gerar também as camadas de resultado</b> preenche as mesmas camadas das ferramentas <b>a</b> e <b>b</b>. Ela já vem marcada e grava nas camadas do grupo <b>Resultados da Pré-Análise</b>, no <b>Pre-Analise/PreAnalise.gpkg</b> do projeto (criado na primeira execução, se ainda não existir), apagando os resultados anteriores. O relatório fica na pasta <b>Pre-Analise/</b>. As entradas já vêm preenchidas com as camadas da RAIZ.
+A opção <b>Gerar também as camadas de resultado</b> preenche as mesmas camadas das ferramentas <b>a</b>, <b>b</b> e <b>d</b>. Ela já vem marcada e grava nas camadas do grupo <b>Resultados da Pré-Análise</b>, no <b>Pre-Analise/PreAnalise.gpkg</b> do projeto (criado na primeira execução, se ainda não existir), apagando os resultados anteriores. O relatório fica na pasta <b>Pre-Analise/</b>. As entradas já vêm preenchidas com as camadas da RAIZ.
 
 <b>Reserva Legal:</b>
 • RL exigida pelo percentual do art. 12 (20%, 35% ou 80%)

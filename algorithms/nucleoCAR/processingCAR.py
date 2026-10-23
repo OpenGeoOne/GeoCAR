@@ -47,7 +47,20 @@ CANDIDATOS = {
                       'Curso_Agua_Natural_Perene_ou_Intermitente_Largura_sup_600m'],
     'nascentes': ['Nascente_50m', 'NASCENTE', 'Nascente_ou_Olho_de_Agua_Perene'],
     'lagos': ['Lago_Lagoa_Natural_50m', 'LAGO_LAGOA_NATURAL', 'LAGOA_NATURAL', 'Lago_ou_Lagoa_Natural'],
-    'restricoes': ['CAR_Vizinhos_SICAR'],
+    'restricoes': ['CAR_Vizinhos_SICAR', 'Restricoes_Territoriais'],
+    # Consistência entre camadas (3d): outras coberturas do solo, Reserva Legal e servidão administrativa
+    'coberturas': ['Area_Consolidada', 'AREA_CONSOLIDADA', 'AC', 'Area_Pousio', 'Pousio', 'POUSIO'],
+    'reservas': ['RL_Proposta', 'RL_Averbada', 'RL_Aprovada_Nao_Averbada', 'RL_Vinculada_Outro_Imovel',
+                 'Reserva_Legal', 'ARL',
+                 'Area_Remanescente_Vegetacao_Nativa_Proposta_para_Constituicao_ReservaLegal',
+                 'Area_Restauracao_Vegetacao_Proposta_para_Constituicao_ReservaLegal',
+                 'Area_ReservaLegal_Aprovada_e_Averbada_em_Matricula',
+                 'Area_para_Constituicao_de_ReservaLegal_em_Condominio'],
+    'servidoes': ['AutoEstrada', 'Rodovia_Ferrovia', 'Linha_Alta_Tensao', 'DutoVia', 'Reservatorio_Abast_GerEnergia',
+                  'SAD', 'SAM', 'INTERESSE_SOCIAL', 'UTILIDADE_PUBLICA',
+                  'Area_Servidao_Administrativa_Utilidade_Publica',
+                  'Area_Servidao_Adm_Reserv_Artif_Ger_Energia_Abast_Publico',
+                  'Vias_Internas_NAO_Registradas_como_Servidao_A'],
 }
 TIPOS_GEOMETRIA = {'ponto': QgsWkbTypes.PointGeometry, 'linha': QgsWkbTypes.LineGeometry,
                    'poligono': QgsWkbTypes.PolygonGeometry}
@@ -79,6 +92,8 @@ CAMPOS_SICAR = [('cod_imovel', _S), ('status_imovel', _S), ('dat_criacao', _DT),
                 ('m_fiscal', _D), ('tipo_imovel', _S)]
 CAMADAS_FIXAS = {
     'CAR_Vizinhos_SICAR': ('MultiPolygon', CAMPOS_SICAR),
+    'Restricoes_Territoriais': ('MultiPolygon', [('tipo', _S), ('nome', _S), ('codigo', _S), ('situacao', _S),
+                                                 ('data', _S), ('fonte', _S), ('consulta', _S)]),
     'Area_Consolidada': ('MultiPolygon', [('observacao', _S)]),
     '3a_problemas': ('Point', [('feicao', _S), ('tipo', _S), ('descricao', _S)]),
     '3a_sobreposicoes': ('MultiPolygon', [('camada', _S), ('identific', _S), ('classe', _S), ('area_ha', _D),
@@ -88,15 +103,20 @@ CAMADAS_FIXAS = {
     '3b_APP_recompor_consolidada': ('MultiPolygon', [('area_ha', _D)]),
     '3b_uso_consolidado_em_APP': ('MultiPolygon', [('area_ha', _D)]),
     '3b_APP_fora_consolidada': ('MultiPolygon', [('area_ha', _D)]),
+    '3d_inconsistencias': ('MultiPolygon', [('gravidade', _S), ('tipo', _S), ('camadas', _S), ('area_ha', _D),
+                                            ('descricao', _S)]),
 }
 GRUPOS_FIXOS = [
-    ('Areas_Vizinhas', ['CAR_Vizinhos_SICAR']),
+    ('Areas_Vizinhas', ['CAR_Vizinhos_SICAR', 'Restricoes_Territoriais']),
     ('Apoio à Pré-Análise', ['Area_Consolidada']),
     (GRUPO_RESULTADOS_FIXO, ['3a_problemas', '3a_sobreposicoes', '3b_APP_integral', '3b_faixa_escadinha',
-                             '3b_APP_recompor_consolidada', '3b_uso_consolidado_em_APP', '3b_APP_fora_consolidada']),
+                             '3b_APP_recompor_consolidada', '3b_uso_consolidado_em_APP', '3b_APP_fora_consolidada',
+                             '3d_inconsistencias']),
 ]
 ESTILOS_FIXOS = {
     'CAR_Vizinhos_SICAR': {'color': '0,0,0,0', 'outline_color': '255,255,0', 'outline_width': '0.6'},
+    'Restricoes_Territoriais': {'color': '255,0,255,40', 'outline_color': '200,0,200', 'outline_width': '0.6',
+                                'outline_style': 'dash'},
     'Area_Consolidada': {'color': '230,200,120,110', 'outline_color': '180,140,60', 'outline_width': '0.4'},
     '3b_APP_integral': {'color': '0,160,255,90', 'outline_color': '0,100,200', 'outline_width': '0.4'},
     '3b_faixa_escadinha': {'color': '0,90,200,120', 'outline_color': '0,60,160', 'outline_width': '0.4'},
@@ -335,7 +355,15 @@ class PosProcessamentoGrupo(QgsProcessingLayerPostProcessorInterface):
 
 
 def aplicarEstilo(camada):
-    """Sobreposições coloridas por classe: relevante em vermelho, ajuste de divisa em laranja."""
+    """Sobreposições por classe (relevante em vermelho, ajuste de divisa em laranja); inconsistências por gravidade."""
+    if camada.fields().indexFromName('gravidade') >= 0:
+        camada.setRenderer(QgsCategorizedSymbolRenderer('gravidade', [
+            QgsRendererCategory('Erro', QgsFillSymbol.createSimple(
+                {'color': '220,0,0,150', 'outline_color': '150,0,0', 'outline_width': '0.6'}), 'Erro'),
+            QgsRendererCategory('Aviso', QgsFillSymbol.createSimple(
+                {'color': '255,220,0,140', 'outline_color': '200,160,0', 'outline_width': '0.4'}), 'Aviso'),
+        ]))
+        return
     if camada.fields().indexFromName('classe') < 0 or camada.fields().indexFromName('larg_med') < 0:
         return
     categorias = [
@@ -343,8 +371,41 @@ def aplicarEstilo(camada):
             {'color': '255,0,0,140', 'outline_color': '180,0,0', 'outline_width': '0.6'}), 'Sobreposição relevante'),
         QgsRendererCategory('Ajuste de divisa', QgsFillSymbol.createSimple(
             {'color': '255,165,0,160', 'outline_color': '255,140,0', 'outline_width': '0.4'}), 'Ajuste de divisa'),
+        QgsRendererCategory('Informativa (APA)', QgsFillSymbol.createSimple(
+            {'color': '0,0,0,0', 'outline_color': '0,150,0', 'outline_width': '0.5', 'outline_style': 'dash'}),
+            'Informativa (APA)'),
     ]
     camada.setRenderer(QgsCategorizedSymbolRenderer('classe', categorias))
+
+
+class PosProcessamentoCopiaFixa(QgsProcessingLayerPostProcessorInterface):
+    """
+    Ao fim de um algoritmo que roda em segundo plano: copia o resultado (camada temporária) para a camada
+    fixa da RAIZ, apagando o conteúdo anterior, e retira a temporária. Projeto não salvo: mantém a temporária
+    com o nome e no grupo indicados.
+    """
+
+    def __init__(self, nomeCamada, nomeGrupo):
+        super().__init__()
+        self.nomeCamada = nomeCamada
+        self.nomeGrupo = nomeGrupo
+
+    def postProcessLayer(self, layer, context, feedback):
+        projeto = context.project() or QgsProject.instance()
+        idCamada = layer.id()
+        fixa = garantirCamadaFixa(self.nomeCamada, projeto)
+        if fixa is None:
+            layer.setName(self.nomeCamada)
+            QTimer.singleShot(0, lambda: moverParaGrupo(projeto, idCamada, self.nomeGrupo))
+            return
+        total = substituirFeicoes(fixa, layer)
+        if feedback:
+            feedback.pushInfo(f'{self.nomeCamada}: {total} feição(ões) gravada(s) na camada do projeto '
+                              '(as anteriores foram apagadas).')
+        if layer.providerType() == 'memory':
+            QTimer.singleShot(0, lambda: projeto.removeMapLayer(idCamada))
+        else:
+            layer.setName(self.nomeCamada + '_copia')
 
 
 def definirPosProcessamento(context, destId, nomeCamada, nomeGrupo):

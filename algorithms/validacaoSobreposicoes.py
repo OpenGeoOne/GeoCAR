@@ -46,7 +46,7 @@ from qgis.core import (
 
 from .nucleoCAR.processingCAR import (adicionarSaida, avisoLegal, camadaPadrao, camadasPadrao, gravarResultado,
                                       rodapeAjuda)
-from .nucleoCAR.sobreposicao import (CLASSE_RELEVANTE, LARGURA_DIVISA_PADRAO, PERC_DIVISA_PADRAO,
+from .nucleoCAR.sobreposicao import (CLASSE_DIVISA, CLASSE_RELEVANTE, LARGURA_DIVISA_PADRAO, PERC_DIVISA_PADRAO,
                                      analisar_sobreposicoes)
 from .nucleoCAR.utils import (adicionar_feicao, area_ha, criar_camada_memoria,
                               src_utm_sirgas, uniao)
@@ -182,9 +182,12 @@ class ValidacaoSobreposicoesCAR(QgsProcessingAlgorithm):
             else:
                 feedback.pushInfo(texto)
         if sobreposicoes:
+            divisas = [item for item in sobreposicoes if item['classe'] == CLASSE_DIVISA]
+            informativas = len(sobreposicoes) - len(relevantes) - len(divisas)
             feedback.pushInfo(self.tr(f'Sobreposição relevante: {areaRelevante:.4f} ha em {len(relevantes)} feição(ões) | '
-                                      f'Ajuste de divisa: {areaSobreposta - areaRelevante:.4f} ha em '
-                                      f'{len(sobreposicoes) - len(relevantes)} feição(ões)'))
+                                      f'Ajuste de divisa: {sum(i["area_ha"] for i in divisas):.4f} ha em '
+                                      f'{len(divisas)} feição(ões)' + (f' | Informativa (APA): {informativas}'
+                                                                      if informativas else '')))
         if not problemas and not sobreposicoes:
             feedback.pushInfo(self.tr('Nenhum problema geométrico ou sobreposição encontrado.'))
         feedback.pushInfo(self.tr('GeoCAR - GeoOne'))

@@ -13,6 +13,15 @@ AREA_MINIMA_HA = 0.0001  # 1 m²
 # Classificação das sobreposições
 CLASSE_DIVISA = "Ajuste de divisa"
 CLASSE_RELEVANTE = "Sobreposição relevante"
+# APA (Área de Proteção Ambiental) admite propriedade privada: a sobreposição só informa
+CLASSE_INFORMATIVA = "Informativa (APA)"
+
+
+def _ehApa(atributos):
+    """True se a feição de restrição é uma Área de Proteção Ambiental."""
+    texto = " ".join(str(v) for k, v in atributos.items()
+                     if k.lower() in ("situacao", "categoria", "nome", "nome_uc", "tipo") and v not in (None, ""))
+    return "área de proteção ambiental" in texto.lower() or texto.upper().startswith("APA ")
 LARGURA_DIVISA_PADRAO = 15.0   # m — largura média máxima de uma lasca de divisa
 PERC_DIVISA_PADRAO = 2.0       # % — fração máxima do imóvel para ser tratada como ajuste de divisa
 
@@ -22,6 +31,9 @@ def _identificador(atributos):
     candidatos = ("cod_imovel", "codigo", "cod_car", "nome", "nome_uc", "terrai_nom",
                   "parcela_co", "codigo_imo", "id")
     chaves = {k.lower(): k for k in atributos}
+    # Camada Restricoes_Territoriais (consulta de restrições): "tipo: nome"
+    if "tipo" in chaves and "nome" in chaves and atributos[chaves["tipo"]] not in (None, ""):
+        return f"{atributos[chaves['tipo']]}: {atributos[chaves['nome']] or ''}".strip(": ")
     for c in candidatos:
         if c in chaves:
             valor = atributos[chaves[c]]
@@ -67,6 +79,8 @@ def analisar_sobreposicoes(perimetro, area_imovel_ha, camadas, src_trabalho,
                 continue
             percentual = (area / area_imovel_ha * 100.0) if area_imovel_ha else 0.0
             largura = largura_media(inter)
+            classe = (CLASSE_INFORMATIVA if _ehApa(atributos)
+                      else classificar(largura, percentual, largura_divisa, perc_divisa))
             resultados.append({
                 "camada": camada.name(),
                 "feicao": fid,
@@ -74,10 +88,11 @@ def analisar_sobreposicoes(perimetro, area_imovel_ha, camadas, src_trabalho,
                 "area_ha": area,
                 "percentual": percentual,
                 "largura_m": largura,
-                "classe": classificar(largura, percentual, largura_divisa, perc_divisa),
+                "classe": classe,
                 "geometria": inter,
             })
 
     # Relevantes primeiro; dentro de cada classe, da maior para a menor área
-    resultados.sort(key=lambda r: (r["classe"] != CLASSE_RELEVANTE, -r["area_ha"]))
+    ordem = {CLASSE_RELEVANTE: 0, CLASSE_DIVISA: 1, CLASSE_INFORMATIVA: 2}
+    resultados.sort(key=lambda r: (ordem.get(r["classe"], 3), -r["area_ha"]))
     return resultados
