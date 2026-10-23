@@ -39,6 +39,7 @@ from qgis.core import (
     QgsProcessingOutputNumber,
     QgsProcessingParameterFeatureSink,
     QgsProcessingParameterField,
+    QgsProcessingParameterMultipleLayers,
     QgsProcessingParameterNumber,
     QgsProcessingParameterVectorLayer,
 )
@@ -59,6 +60,7 @@ class AppHidricaCAR(QgsProcessingAlgorithm):
     LARGURA_PADRAO = 'LARGURA_PADRAO'
     INPUT_NASCENTES = 'INPUT_NASCENTES'
     INPUT_LAGOS = 'INPUT_LAGOS'
+    INPUT_RIOS_POLIGONO = 'INPUT_RIOS_POLIGONO'
     INPUT_CONSOLIDADA = 'INPUT_CONSOLIDADA'
     MODULO_FISCAL = 'MODULO_FISCAL'
     AREA_2008 = 'AREA_2008'
@@ -102,6 +104,11 @@ class AppHidricaCAR(QgsProcessingAlgorithm):
             self.LARGURA_PADRAO, self.tr('Largura padrão quando não houver dado (m)'),
             type=decimal, minValue=0.1, defaultValue=5.0))
 
+        self.addParameter(QgsProcessingParameterMultipleLayers(
+            self.INPUT_RIOS_POLIGONO,
+            self.tr("Rios de 10 m ou mais — leito em polígono (ex.: Rio_10_50m_50m)"),
+            layerType=poligono, optional=True))
+
         self.addParameter(QgsProcessingParameterVectorLayer(
             self.INPUT_NASCENTES, self.tr('Nascentes e olhos d\'água (pontos)'),
             [Qgis.ProcessingSourceType.VectorPoint], optional=True))
@@ -144,9 +151,11 @@ class AppHidricaCAR(QgsProcessingAlgorithm):
         larguraPadrao = self.parameterAsDouble(parameters, self.LARGURA_PADRAO, context)
         camadaNascentes = self.parameterAsVectorLayer(parameters, self.INPUT_NASCENTES, context)
         camadaLagos = self.parameterAsVectorLayer(parameters, self.INPUT_LAGOS, context)
+        camadasRiosPoligono = [c for c in self.parameterAsLayerList(parameters, self.INPUT_RIOS_POLIGONO, context)
+                               if c is not None and c.type() == 0]
         camadaConsolidada = self.parameterAsVectorLayer(parameters, self.INPUT_CONSOLIDADA, context)
 
-        if camadaHidro is None and camadaNascentes is None and camadaLagos is None:
+        if camadaHidro is None and camadaNascentes is None and camadaLagos is None and not camadasRiosPoligono:
             raise QgsProcessingException(
                 self.tr('Informe ao menos uma camada de hidrografia, nascentes ou lagos.'))
 
@@ -174,7 +183,8 @@ class AppHidricaCAR(QgsProcessingAlgorithm):
         resultado = moduloApp.calcular_app(
             perimetro, srcTrabalho, nModulos,
             hidrografia=camadaHidro, campo_largura=campoLargura, largura_padrao=larguraPadrao,
-            nascentes=camadaNascentes, lagos=camadaLagos, consolidada=consolidada)
+            nascentes=camadaNascentes, lagos=camadaLagos, consolidada=consolidada,
+            rios_poligono=camadasRiosPoligono)
 
         for aviso in resultado['avisos']:
             feedback.pushWarning(aviso)
@@ -252,6 +262,7 @@ class AppHidricaCAR(QgsProcessingAlgorithm):
 
 <b>APP integral (art. 4º da Lei 12.651/2012):</b>
 • cursos d'água: 30 m (&lt;10 m), 50 m (10–50 m), 100 m (50–200 m), 200 m (200–600 m), 500 m (&gt;600 m)
+• rios de 10 m ou mais em polígono (leito): largura estimada por 2 × área / perímetro
 • nascentes: raio de 50 m
 • lagos e lagoas naturais: 50 m (até 20 ha) ou 100 m
 

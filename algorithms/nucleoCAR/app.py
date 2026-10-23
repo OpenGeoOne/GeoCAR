@@ -11,8 +11,9 @@ Observações de modelagem:
 - A hidrografia linear é tratada como eixo do curso d'água. A faixa é medida
   a partir da borda da calha do leito regular, por isso o buffer aplicado é
   (faixa + largura / 2).
-- Rios largos representados como polígono devem ser incluídos na camada de
-  massas d'água ou convertidos previamente.
+- Rios de 10 m ou mais representados pelo leito em polígono (ex.: Rio_10_50m_50m
+  da RAIZ Federal) entram em 'rios_poligono'. A largura de cada feição é
+  estimada por 2 × área / perímetro e a faixa é medida a partir da margem.
 - A "escadinha" só se aplica DENTRO da área rural consolidada. Fora dela vale
   a APP integral.
 - Normas estaduais podem ser mais restritivas. Confira a legislação local.
@@ -106,7 +107,7 @@ def _largura(atributos, campo, padrao):
 
 def calcular_app(perimetro, src_trabalho, n_modulos, hidrografia=None,
                  campo_largura=None, largura_padrao=5.0, nascentes=None,
-                 lagos=None, consolidada=None):
+                 lagos=None, consolidada=None, rios_poligono=None):
     """
     Calcula as APPs hídricas dentro do perímetro.
 
@@ -142,6 +143,22 @@ def calcular_app(perimetro, src_trabalho, n_modulos, hidrografia=None,
         if sem_largura:
             avisos.append(f"{sem_largura} trecho(s) de hidrografia sem largura informada: "
                           f"adotado {largura_padrao:g} m.")
+
+    # --- Rios de 10 m ou mais representados pelo leito (polígonos) ---
+    for camadaRio in (rios_poligono or []):
+        for _fid, _a, geom in feicoes_no_src(camadaRio, src_trabalho, busca):
+            leito = geom.makeValid()
+            perimetro_leito = leito.length()
+            if leito.isEmpty() or perimetro_leito <= 0:
+                continue
+            largura = 2.0 * leito.area() / perimetro_leito
+            fi = faixa_rio_integral(largura)
+            fc = faixa_rio_consolidada(n_modulos, largura)
+            integral.append(leito.buffer(fi, SEGMENTOS_BUFFER))
+            escadinha.append(leito.buffer(fc, SEGMENTOS_BUFFER))
+            canais.append(leito)
+            detalhes.append({"tipo": f"Rio em polígono ({camadaRio.name()}, ~{largura:.0f} m)",
+                             "faixa_integral": fi, "faixa_consolidada": fc})
 
     # --- Nascentes (pontos) ---
     if nascentes is not None:

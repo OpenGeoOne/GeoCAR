@@ -63,6 +63,7 @@ class ReservaLegalRelatorioCAR(QgsProcessingAlgorithm):
     LARGURA_PADRAO = 'LARGURA_PADRAO'
     INPUT_NASCENTES = 'INPUT_NASCENTES'
     INPUT_LAGOS = 'INPUT_LAGOS'
+    INPUT_RIOS_POLIGONO = 'INPUT_RIOS_POLIGONO'
     INPUT_RESTRICOES = 'INPUT_RESTRICOES'
     OUTPUT_HTML = 'OUTPUT_HTML'
 
@@ -101,6 +102,10 @@ class ReservaLegalRelatorioCAR(QgsProcessingAlgorithm):
         self.addParameter(QgsProcessingParameterNumber(
             self.LARGURA_PADRAO, self.tr('Largura padrão quando não houver dado (m)'),
             type=decimal, minValue=0.1, defaultValue=5.0))
+        self.addParameter(QgsProcessingParameterMultipleLayers(
+            self.INPUT_RIOS_POLIGONO,
+            self.tr("Rios de 10 m ou mais — leito em polígono (ex.: Rio_10_50m_50m)"),
+            layerType=poligono, optional=True))
         self.addParameter(QgsProcessingParameterVectorLayer(
             self.INPUT_NASCENTES, self.tr("Nascentes e olhos d'água (pontos)"),
             [Qgis.ProcessingSourceType.VectorPoint], optional=True))
@@ -141,6 +146,8 @@ class ReservaLegalRelatorioCAR(QgsProcessingAlgorithm):
             'largura_padrao': self.parameterAsDouble(parameters, self.LARGURA_PADRAO, context),
             'nascentes': self.parameterAsVectorLayer(parameters, self.INPUT_NASCENTES, context),
             'lagos': self.parameterAsVectorLayer(parameters, self.INPUT_LAGOS, context),
+            'rios_poligono': [c for c in self.parameterAsLayerList(parameters, self.INPUT_RIOS_POLIGONO, context)
+                              if c is not None and c.type() == 0],
             'restricoes': [c for c in self.parameterAsLayerList(parameters, self.INPUT_RESTRICOES, context)
                            if isinstance(c, QgsVectorLayer)],
             'caminho_relatorio': caminhoHtml,

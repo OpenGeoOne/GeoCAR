@@ -92,18 +92,11 @@ class baixarCAR(QgsProcessingAlgorithm):
 
     def processAlgorithm(self, parameters, context, feedback):
 
-        extensao = self.parameterAsExtent(
-        parameters,
-        self.EXTENT,
-        context
-        )
-        if not extensao:
+        # Retângulo convertido para SIRGAS 2000, qualquer que seja o SRC informado na extensão
+        crsGeo = QgsCoordinateReferenceSystem('EPSG:4674')
+        extensao = self.parameterAsExtent(parameters, self.EXTENT, context, crsGeo)
+        if extensao is None or extensao.isEmpty():
             raise QgsProcessingException(self.invalidSourceError(parameters, self.EXTENT))
-
-        crsSrc = QgsCoordinateReferenceSystem(QgsProject().instance().crs())
-        crsDest = QgsCoordinateReferenceSystem('EPSG:4326')
-        proj2geo = QgsCoordinateTransform(crsSrc, crsDest, QgsProject.instance())
-        extensao = proj2geo.transform(extensao)
 
         # Verificar tamanho da extensão
         y_min = extensao.yMinimum()
@@ -145,34 +138,57 @@ class baixarCAR(QgsProcessingAlgorithm):
                 'A extensão escolhida não intercepta nenhuma UF do Brasil. '
                 'Verifique o retângulo e o SRC do projeto.')
 
-        source = QgsVectorLayer(uris[0], "my wfs layer", "WFS")
-        if not source.isValid():
+        # Abre a camada WFS de cada UF. As UFs podem ter esquemas diferentes
+        # (ex.: MG tem o campo data_atualizacao), por isso o resultado usa a união dos campos.
+        camadasUf = []
+        for uri in uris:
+            vlayer = QgsVectorLayer(uri, "wfs_layer", "WFS")
+            if vlayer.isValid():
+                camadasUf.append((uri, vlayer))
+            else:
+                feedback.reportError(f'Não foi possível acessar o WFS: {uri}', fatalError=False)
+        if not camadasUf:
             raise QgsProcessingException(
                 'Não foi possível acessar o serviço WFS. Verifique a conexão com a internet '
                 'ou tente novamente mais tarde.')
+
+        camposUniao = QgsFields()
+        for _uri, vlayer in camadasUf:
+            for campo in vlayer.fields():
+                if camposUniao.indexFromName(campo.name()) < 0:
+                    camposUniao.append(campo)
+
         (sink, dest_id) = self.parameterAsSink(
             parameters,
             self.OUTPUT,
             context,
-            source.fields(),
-            source.wkbType(),
-            source.sourceCrs()
+            camposUniao,
+            QgsWkbTypes.MultiPolygon,
+            crsGeo
         )
         if sink is None:
             raise QgsProcessingException(self.invalidSinkError(parameters, self.OUTPUT))
 
-        for uri in uris:
-            vlayer = QgsVectorLayer(uri, "wfs_layer", "WFS")
-
-            request = QgsFeatureRequest().setFilterRect(extensao)
-
-            for current, feature in enumerate(vlayer.getFeatures(request)):
+        request = QgsFeatureRequest().setFilterRect(extensao)
+        for uri, vlayer in camadasUf:
+            nomesCampos = [c.name() for c in vlayer.fields()]
+            total, rejeitadas = 0, 0
+            for feature in vlayer.getFeatures(request):
                 # Stop the algorithm if cancel button has been clicked
                 if feedback.isCanceled():
                     break
-
-                # Add a feature in the sink
-                sink.addFeature(feature, QgsFeatureSink.FastInsert)
+                novaFeicao = QgsFeature(camposUniao)
+                geometria = feature.geometry()
+                geometria.convertToMultiType()
+                novaFeicao.setGeometry(geometria)
+                for nomeCampo in nomesCampos:
+                    novaFeicao[nomeCampo] = feature[nomeCampo]
+                if sink.addFeature(novaFeicao, QgsFeatureSink.FastInsert):
+                    total += 1
+                else:
+                    rejeitadas += 1
+            nomeCamada = uri.split("typename='")[1].split("'")[0]
+            feedback.pushInfo(f'{nomeCamada}: {total} imóvel(is)' + (f', {rejeitadas} rejeitado(s)' if rejeitadas else ''))
 
         global renamer
         renamer = Renamer(layer)

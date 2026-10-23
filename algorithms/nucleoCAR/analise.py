@@ -67,6 +67,7 @@ def executar(p):
         nascentes=p["nascentes"],
         lagos=p["lagos"],
         consolidada=consolidada,
+        rios_poligono=p.get("rios_poligono"),
     )
     limite = modulo_app.limite_61b(n_modulos, area_imovel)
     area_recompor = area_ha(res_app["app_recompor"])
