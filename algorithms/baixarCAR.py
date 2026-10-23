@@ -26,10 +26,12 @@ __author__ = 'Prof Cazaroli e Leandro França'
 __date__ = '2024-11-25'
 __copyright__ = '(C) 2024 by Prof Cazaroli e Leandro França'
 
-from qgis.PyQt.QtCore import QCoreApplication, QMetaType, QTimer
+from qgis.PyQt.QtCore import QCoreApplication, QMetaType
 from qgis.core import *
 import os
 from qgis.PyQt.QtGui import QIcon
+
+from .nucleoCAR.processingCAR import PosProcessamentoGrupo, prepararDestino
 
 # Resultado da Consulta CAR na estrutura RAIZ
 NOME_VIZINHOS = 'CAR_Vizinhos_SICAR'
@@ -168,10 +170,8 @@ class baixarCAR(QgsProcessingAlgorithm):
                 if camposUniao.indexFromName(campo.name()) < 0:
                     camposUniao.append(campo)
 
-        # Cria a pasta de destino quando o resultado for gravado em arquivo
-        destino = self.parameterAsOutputLayer(parameters, self.OUTPUT, context)
-        if destino and os.path.splitext(destino)[1] and not destino.startswith(('memory:', 'ogr:', 'postgres:')):
-            os.makedirs(os.path.dirname(destino), exist_ok=True)
+        # Cria a pasta de destino e libera o arquivo de uma consulta anterior
+        prepararDestino(self.parameterAsOutputLayer(parameters, self.OUTPUT, context), context.project())
 
         (sink, dest_id) = self.parameterAsSink(
             parameters,
@@ -267,45 +267,8 @@ A área de consulta deve ser pequena (até aproximadamente 1°) para garantir de
         return txt + footer
 
 
-class Renamer (QgsProcessingLayerPostProcessorInterface):
-    """Renomeia a camada de resultado, coloca no grupo Areas_Vizinhas e remove a cópia antiga do mesmo arquivo."""
+class Renamer(PosProcessamentoGrupo):
+    """Renomeia o resultado da Consulta CAR e o coloca no grupo Areas_Vizinhas."""
 
     def __init__(self, layer_name):
-        self.name = layer_name
-        super().__init__()
-
-    def postProcessLayer(self, layer, context, feedback):
-        layer.setName(self.name)
-        projeto = context.project() or QgsProject.instance()
-        idCamada = layer.id()
-        # Depois que o Processing termina de inserir a camada na árvore
-        QTimer.singleShot(0, lambda: organizarVizinhos(projeto, idCamada))
-
-
-def organizarVizinhos(projeto, idCamada):
-    """Move a camada para o grupo Areas_Vizinhas (criado abaixo dos grupos da RAIZ, se não existir)."""
-    camada = projeto.mapLayer(idCamada)
-    if camada is None:
-        return
-    raiz = projeto.layerTreeRoot()
-
-    # Remove camadas antigas que apontam para o mesmo arquivo (consulta refeita)
-    fonte = camada.source().split('|')[0]
-    if camada.providerType() == 'ogr':
-        for outra in list(projeto.mapLayers().values()):
-            if outra.id() != idCamada and outra.providerType() == 'ogr' and outra.source().split('|')[0] == fonte:
-                projeto.removeMapLayer(outra.id())
-
-    grupo = next((g for g in raiz.findGroups(True) if g.name().lower() == GRUPO_VIZINHOS.lower()), None)
-    if grupo is None:
-        # Abaixo do último grupo da raiz, acima das camadas soltas (ex.: Google Hybrid)
-        indices = [i for i, filho in enumerate(raiz.children()) if isinstance(filho, QgsLayerTreeGroup)]
-        grupo = raiz.insertGroup(indices[-1] + 1 if indices else 0, GRUPO_VIZINHOS)
-
-    no = raiz.findLayer(idCamada)
-    if no is None:
-        grupo.insertLayer(0, camada)
-    elif no.parent() is not grupo:
-        clone = no.clone()
-        grupo.insertChildNode(0, clone)
-        no.parent().removeChildNode(no)
+        super().__init__(layer_name, GRUPO_VIZINHOS)

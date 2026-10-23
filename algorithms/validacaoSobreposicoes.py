@@ -44,7 +44,7 @@ from qgis.core import (
     QgsVectorLayer,
 )
 
-from .nucleoCAR.processingCAR import avisoLegal, gravarCamadaNoSink, rodapeAjuda
+from .nucleoCAR.processingCAR import avisoLegal, destinoPadrao, gravarCamadaNoSink, rodapeAjuda
 from .nucleoCAR.sobreposicao import (CLASSE_RELEVANTE, LARGURA_DIVISA_PADRAO, PERC_DIVISA_PADRAO,
                                      analisar_sobreposicoes)
 from .nucleoCAR.utils import (adicionar_feicao, area_ha, criar_camada_memoria,
@@ -95,11 +95,12 @@ class ValidacaoSobreposicoesCAR(QgsProcessingAlgorithm):
 
         self.addParameter(QgsProcessingParameterFeatureSink(
             self.OUTPUT_PROBLEMAS, self.tr('Problemas de validação'),
-            type=Qgis.ProcessingSourceType.VectorPoint, createByDefault=True))
+            type=Qgis.ProcessingSourceType.VectorPoint, createByDefault=True,
+            defaultValue=destinoPadrao('3a_problemas.gpkg')))
 
         self.addParameter(QgsProcessingParameterFeatureSink(
             self.OUTPUT_SOBREPOSICOES, self.tr('Sobreposições'),
-            type=poligono, createByDefault=True))
+            type=poligono, createByDefault=True, defaultValue=destinoPadrao('3a_sobreposicoes.gpkg')))
 
         self.addOutput(QgsProcessingOutputNumber(self.OUTPUT_N_PROBLEMAS,
                                                  self.tr('Número de problemas')))
@@ -163,9 +164,10 @@ class ValidacaoSobreposicoesCAR(QgsProcessingAlgorithm):
                               round(item['area_ha'], 4), round(item['percentual'], 2),
                               round(item['largura_m'], 2)])
 
-        idProblemas = gravarCamadaNoSink(self, parameters, self.OUTPUT_PROBLEMAS, context, camadaProblemas)
+        idProblemas = gravarCamadaNoSink(self, parameters, self.OUTPUT_PROBLEMAS, context, camadaProblemas,
+                                         '3a_problemas')
         idSobreposicoes = gravarCamadaNoSink(self, parameters, self.OUTPUT_SOBREPOSICOES, context,
-                                             camadaSobreposicoes)
+                                             camadaSobreposicoes, '3a_sobreposicoes')
 
         # Resumo no log
         areaSobreposta = sum(item['area_ha'] for item in sobreposicoes)

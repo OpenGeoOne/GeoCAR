@@ -45,7 +45,7 @@ from qgis.core import (
 )
 
 from .nucleoCAR import app as moduloApp
-from .nucleoCAR.processingCAR import (avisoLegal, camadaPoligonoArea, gravarCamadaNoSink,
+from .nucleoCAR.processingCAR import (avisoLegal, camadaPoligonoArea, destinoPadrao, gravarCamadaNoSink,
                                       rodapeAjuda)
 from .nucleoCAR.utils import area_ha, feicoes_no_src, src_utm_sirgas, uniao
 from .nucleoCAR.validacao import verificar_extrapolacao
@@ -75,6 +75,22 @@ class AppHidricaCAR(QgsProcessingAlgorithm):
     OUTPUT_AREA_INTEGRAL = 'OUTPUT_AREA_INTEGRAL'
     OUTPUT_AREA_RECOMPOR = 'OUTPUT_AREA_RECOMPOR'
     OUTPUT_LIMITE_61B = 'OUTPUT_LIMITE_61B'
+
+    SAIDAS = [
+        (OUTPUT_APP_INTEGRAL, 'APP integral (art. 4º)'),
+        (OUTPUT_FAIXA_ESCADINHA, 'Faixa da escadinha (art. 61-A)'),
+        (OUTPUT_APP_RECOMPOR, 'APP a recompor em área consolidada'),
+        (OUTPUT_USO_CONSOLIDADO, 'Uso consolidado mantido em APP'),
+        (OUTPUT_APP_FORA_CONSOLIDADA, 'APP fora de área consolidada'),
+    ]
+    # Nome da camada e do arquivo em Pre-Analise/
+    NOMES_SAIDAS = {
+        OUTPUT_APP_INTEGRAL: '3b_APP_integral',
+        OUTPUT_FAIXA_ESCADINHA: '3b_faixa_escadinha',
+        OUTPUT_APP_RECOMPOR: '3b_APP_recompor_consolidada',
+        OUTPUT_USO_CONSOLIDADO: '3b_uso_consolidado_em_APP',
+        OUTPUT_APP_FORA_CONSOLIDADA: '3b_APP_fora_consolidada',
+    }
 
     def initAlgorithm(self, config=None):
         poligono = Qgis.ProcessingSourceType.VectorPolygon
@@ -121,16 +137,10 @@ class AppHidricaCAR(QgsProcessingAlgorithm):
             self.INPUT_CONSOLIDADA, self.tr('Área rural consolidada até 22/07/2008 (opcional)'),
             [poligono], optional=True))
 
-        saidas = [
-            (self.OUTPUT_APP_INTEGRAL, 'APP integral (art. 4º)', True),
-            (self.OUTPUT_FAIXA_ESCADINHA, 'Faixa da escadinha (art. 61-A)', True),
-            (self.OUTPUT_APP_RECOMPOR, 'APP a recompor em área consolidada', True),
-            (self.OUTPUT_USO_CONSOLIDADO, 'Uso consolidado mantido em APP', True),
-            (self.OUTPUT_APP_FORA_CONSOLIDADA, 'APP fora de área consolidada', True),
-        ]
-        for chave, rotulo, padrao in saidas:
+        for chave, rotulo in self.SAIDAS:
             self.addParameter(QgsProcessingParameterFeatureSink(
-                chave, self.tr(rotulo), type=poligono, createByDefault=padrao, optional=True))
+                chave, self.tr(rotulo), type=poligono, createByDefault=True, optional=True,
+                defaultValue=destinoPadrao(self.NOMES_SAIDAS[chave] + '.gpkg')))
 
         self.addOutput(QgsProcessingOutputNumber(self.OUTPUT_N_MODULOS, self.tr('Número de módulos fiscais')))
         self.addOutput(QgsProcessingOutputNumber(self.OUTPUT_AREA_INTEGRAL, self.tr('APP integral (ha)')))
@@ -216,7 +226,8 @@ class AppHidricaCAR(QgsProcessingAlgorithm):
             if parameters.get(chave) is None:
                 continue
             resultados[chave] = gravarCamadaNoSink(self, parameters, chave, context,
-                                                   camadaPoligonoArea(nome, srcTrabalho, geom))
+                                                   camadaPoligonoArea(nome, srcTrabalho, geom),
+                                                   self.NOMES_SAIDAS[chave])
 
         feedback.pushInfo(self.tr(f'APP integral: {area_ha(resultado["app_integral"]):.4f} ha'))
         feedback.pushInfo(self.tr(f'APP a preservar/recompor: {areaRecompor:.4f} ha'))

@@ -46,7 +46,7 @@ from qgis.core import (
 )
 
 from .nucleoCAR import analise
-from .nucleoCAR.processingCAR import OPCOES_RL, VALORES_RL, avisoLegal, rodapeAjuda
+from .nucleoCAR.processingCAR import OPCOES_RL, VALORES_RL, avisoLegal, destinoPadrao, rodapeAjuda
 from .nucleoCAR.sobreposicao import LARGURA_DIVISA_PADRAO, PERC_DIVISA_PADRAO
 
 
@@ -127,7 +127,8 @@ class ReservaLegalRelatorioCAR(QgsProcessingAlgorithm):
             defaultValue=PERC_DIVISA_PADRAO))
         self.addParameter(QgsProcessingParameterFileDestination(
             self.OUTPUT_HTML, self.tr('Relatório de pré-análise (PDF ou HTML)'),
-            fileFilter='PDF (*.pdf);;HTML (*.html)'))
+            fileFilter='PDF (*.pdf);;HTML (*.html)',
+            defaultValue=destinoPadrao('3c_relatorio_pre_analise.pdf')))
 
         self.addOutput(QgsProcessingOutputNumber(self.OUTPUT_RL_EXIGIDA, self.tr('RL exigida (ha)')))
         self.addOutput(QgsProcessingOutputNumber(self.OUTPUT_VEGETACAO, self.tr('Vegetação nativa (ha)')))
