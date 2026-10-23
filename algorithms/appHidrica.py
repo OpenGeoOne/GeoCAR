@@ -226,7 +226,7 @@ class AppHidricaCAR(QgsProcessingAlgorithm):
         return 'apphidricacar'
 
     def displayName(self):
-        return self.tr('9. APP hídrica e escadinha')
+        return self.tr('5. APP hídrica e escadinha')
 
     def group(self):
         return self.tr(self.groupId())

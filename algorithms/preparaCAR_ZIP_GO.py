@@ -47,7 +47,7 @@ class preparaCAR_ZIP_GO(QgsProcessingAlgorithm):
         return 'preparaCAR_ZIP_GO'
 
     def displayName(self):
-        return self.tr('6. Gerar Zip para o CAR de Goiás (ZIP Único)')
+        return self.tr('3. Gerar Zip para o CAR de Goiás (ZIP Único)')
 
     def group(self):
         return self.tr('Gerar arquivos para o CAR')

@@ -177,7 +177,7 @@ class ReservaLegalRelatorioCAR(QgsProcessingAlgorithm):
         return 'reservalegalrelatoriocar'
 
     def displayName(self):
-        return self.tr('10. Reserva Legal e relatório de pré-análise')
+        return self.tr('6. Reserva Legal e relatório de pré-análise')
 
     def group(self):
         return self.tr(self.groupId())
@@ -207,7 +207,7 @@ class ReservaLegalRelatorioCAR(QgsProcessingAlgorithm):
 • déficit <b>com</b> e <b>sem</b> o cômputo da APP na RL (art. 15)
 • alerta do <b>art. 67</b> para imóveis de até 4 módulos fiscais em 22/07/2008
 
-<b>O relatório também reúne:</b> validação geométrica da ATI, sobreposições, APP hídrica integral, faixa da escadinha e teto do art. 61-B — as mesmas análises das ferramentas <b>8</b> e <b>9</b>.
+<b>O relatório também reúne:</b> validação geométrica da ATI, sobreposições, APP hídrica integral, faixa da escadinha e teto do art. 61-B — as mesmas análises das ferramentas <b>4</b> e <b>5</b>.
 
 As áreas calculadas ficam disponíveis como saídas numéricas, para uso em modelos do Processing.
 """ + avisoLegal()

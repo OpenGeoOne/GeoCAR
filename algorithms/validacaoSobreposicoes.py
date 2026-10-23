@@ -170,7 +170,7 @@ class ValidacaoSobreposicoesCAR(QgsProcessingAlgorithm):
         return 'validacaosobreposicoescar'
 
     def displayName(self):
-        return self.tr('8. Validação e sobreposições')
+        return self.tr('4. Validação e sobreposições')
 
     def group(self):
         return self.tr(self.groupId())
