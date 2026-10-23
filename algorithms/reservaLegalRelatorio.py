@@ -48,8 +48,8 @@ from qgis.core import (
 
 from .nucleoCAR import analise
 from .nucleoCAR.processingCAR import (OPCOES_RL, VALORES_RL, avisoLegal, camadaFixa, camadaPadrao,
-                                      camadasPadrao, destinoPadrao, gravarECarregarResultado, limparCamada,
-                                      rodapeAjuda, substituirFeicoes)
+                                      camadasPadrao, destinoPadrao, garantirCamadaFixa, gravarECarregarResultado,
+                                      limparCamada, projetoSalvo, rodapeAjuda, substituirFeicoes)
 from .nucleoCAR.sobreposicao import LARGURA_DIVISA_PADRAO, PERC_DIVISA_PADRAO
 
 
@@ -152,7 +152,7 @@ class ReservaLegalRelatorioCAR(QgsProcessingAlgorithm):
             self.GERAR_CAMADAS,
             self.tr('Gerar também as camadas de resultado (as mesmas das ferramentas a e b)'),
             # Marcada quando a RAIZ tem as camadas fixas de resultado
-            defaultValue=camadaFixa('3a_sobreposicoes') is not None))
+            defaultValue=camadaFixa('3a_sobreposicoes') is not None or projetoSalvo()))
 
         self.addOutput(QgsProcessingOutputNumber(self.OUTPUT_RL_EXIGIDA, self.tr('RL exigida (ha)')))
         self.addOutput(QgsProcessingOutputNumber(self.OUTPUT_VEGETACAO, self.tr('Vegetação nativa (ha)')))
@@ -203,7 +203,7 @@ class ReservaLegalRelatorioCAR(QgsProcessingAlgorithm):
             porNome = {self.CAMADAS_RESULTADO[c.name()]: c for c in resultado['camadas']
                        if c.name() in self.CAMADAS_RESULTADO}
             for nome in self.CAMADAS_RESULTADO.values():
-                fixa = camadaFixa(nome, context.project())
+                fixa = garantirCamadaFixa(nome, context.project())
                 camada = porNome.get(nome)
                 if fixa is not None:
                     # Camada fixa da RAIZ: apaga as feições anteriores (também quando o resultado é vazio)
@@ -272,7 +272,7 @@ class ReservaLegalRelatorioCAR(QgsProcessingAlgorithm):
 • APP hídrica integral, faixa da escadinha e teto do art. 61-B
 • Reserva Legal
 
-A opção <b>Gerar também as camadas de resultado</b> preenche as mesmas camadas das ferramentas <b>a</b> e <b>b</b>. Na estrutura RAIZ com o <b>PreAnalise.gpkg</b>, ela já vem marcada e grava nas camadas fixas do grupo <b>Resultados da Pré-Análise</b>, apagando os resultados anteriores; sem ele, grava em <b>Pre-Analise/</b>. As entradas já vêm preenchidas com as camadas da RAIZ.
+A opção <b>Gerar também as camadas de resultado</b> preenche as mesmas camadas das ferramentas <b>a</b> e <b>b</b>. Ela já vem marcada e grava nas camadas do grupo <b>Resultados da Pré-Análise</b>, no <b>PreAnalise.gpkg</b> do projeto (criado na primeira execução, se ainda não existir), apagando os resultados anteriores. O relatório fica na pasta <b>Pre-Analise/</b>. As entradas já vêm preenchidas com as camadas da RAIZ.
 
 <b>Reserva Legal:</b>
 • RL exigida pelo percentual do art. 12 (20%, 35% ou 80%)

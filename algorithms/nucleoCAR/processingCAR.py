@@ -4,12 +4,13 @@
 
 import os
 
-from qgis.PyQt.QtCore import QTimer
+from qgis.PyQt.QtCore import QMetaType, QTimer
 from qgis.core import (QgsCategorizedSymbolRenderer, QgsCoordinateTransform, QgsFeature, QgsFeatureSink,
                        QgsFillSymbol, QgsGeometry, QgsLayerTreeGroup, QgsMapLayer, QgsProcessingContext,
                        QgsProcessingException, QgsProcessingLayerPostProcessorInterface,
                        QgsProcessingParameterFeatureSink, QgsProcessingUtils, QgsProject, QgsProviderRegistry,
-                       QgsRendererCategory, QgsVectorFileWriter, QgsWkbTypes)
+                       QgsField, QgsMarkerSymbol, QgsRendererCategory, QgsSingleSymbolRenderer,
+                       QgsVectorFileWriter, QgsVectorLayer, QgsWkbTypes)
 
 from .utils import adicionar_feicao, area_ha, criar_camada_memoria
 
@@ -25,6 +26,7 @@ VALORES_RL = [20.0, 35.0, 80.0]
 # Resultados da pré-análise na estrutura RAIZ
 PASTA_RESULTADOS = 'Pre-Analise'
 GRUPO_RESULTADOS = 'Resultados da Pré-Análise'
+GRUPO_RESULTADOS_FIXO = GRUPO_RESULTADOS
 
 # Camadas fixas da estrutura RAIZ (vazias no modelo) ficam neste GeoPackage, fora do GeoCAR*.gpkg
 ARQUIVO_FIXO = 'PreAnalise.gpkg'
@@ -67,6 +69,107 @@ def camadaPadrao(chave, tipo='poligono'):
     """Primeira camada do projeto atual que corresponde à chave, ou None."""
     nomes = camadasPadrao(chave, tipo)
     return nomes[0] if nomes else None
+
+
+# Estrutura fixa: grupo -> camadas; camada -> (geometria, campos)
+_S, _D, _I, _DT = QMetaType.Type.QString, QMetaType.Type.Double, QMetaType.Type.Int, QMetaType.Type.QDateTime
+CAMPOS_SICAR = [('cod_imovel', _S), ('status_imovel', _S), ('dat_criacao', _DT), ('data_atualizacao', _DT),
+                ('area', _D), ('condicao', _S), ('uf', _S), ('municipio', _S), ('cod_municipio_ibge', _I),
+                ('m_fiscal', _D), ('tipo_imovel', _S)]
+CAMADAS_FIXAS = {
+    'CAR_Vizinhos_SICAR': ('MultiPolygon', CAMPOS_SICAR),
+    'Area_Consolidada': ('MultiPolygon', [('observacao', _S)]),
+    '3a_problemas': ('Point', [('feicao', _S), ('tipo', _S), ('descricao', _S)]),
+    '3a_sobreposicoes': ('MultiPolygon', [('camada', _S), ('identific', _S), ('classe', _S), ('area_ha', _D),
+                                          ('perc', _D), ('larg_med', _D)]),
+    '3b_APP_integral': ('MultiPolygon', [('area_ha', _D)]),
+    '3b_faixa_escadinha': ('MultiPolygon', [('area_ha', _D)]),
+    '3b_APP_recompor_consolidada': ('MultiPolygon', [('area_ha', _D)]),
+    '3b_uso_consolidado_em_APP': ('MultiPolygon', [('area_ha', _D)]),
+    '3b_APP_fora_consolidada': ('MultiPolygon', [('area_ha', _D)]),
+}
+GRUPOS_FIXOS = [
+    ('Areas_Vizinhas', ['CAR_Vizinhos_SICAR']),
+    ('Apoio à Pré-Análise', ['Area_Consolidada']),
+    (GRUPO_RESULTADOS_FIXO, ['3a_problemas', '3a_sobreposicoes', '3b_APP_integral', '3b_faixa_escadinha',
+                             '3b_APP_recompor_consolidada', '3b_uso_consolidado_em_APP', '3b_APP_fora_consolidada']),
+]
+ESTILOS_FIXOS = {
+    'CAR_Vizinhos_SICAR': {'color': '0,0,0,0', 'outline_color': '255,255,0', 'outline_width': '0.6'},
+    'Area_Consolidada': {'color': '230,200,120,110', 'outline_color': '180,140,60', 'outline_width': '0.4'},
+    '3b_APP_integral': {'color': '0,160,255,90', 'outline_color': '0,100,200', 'outline_width': '0.4'},
+    '3b_faixa_escadinha': {'color': '0,90,200,120', 'outline_color': '0,60,160', 'outline_width': '0.4'},
+    '3b_APP_recompor_consolidada': {'color': '255,120,0,130', 'outline_color': '200,80,0', 'outline_width': '0.4'},
+    '3b_uso_consolidado_em_APP': {'color': '255,230,0,120', 'outline_color': '200,170,0', 'outline_width': '0.4'},
+    '3b_APP_fora_consolidada': {'color': '0,200,200,100', 'outline_color': '0,140,140', 'outline_width': '0.4'},
+}
+
+
+def projetoSalvo(projeto=None):
+    """True se o projeto já foi salvo (tem pasta para o PreAnalise.gpkg)."""
+    return bool((projeto or QgsProject.instance()).homePath())
+
+
+def estiloFixo(camada):
+    """Estilo padrão das camadas fixas."""
+    nome = camada.name()
+    if nome == '3a_problemas':
+        camada.setRenderer(QgsSingleSymbolRenderer(QgsMarkerSymbol.createSimple(
+            {'name': 'circle', 'color': '255,0,0', 'size': '3'})))
+    elif nome in ESTILOS_FIXOS:
+        camada.setRenderer(QgsSingleSymbolRenderer(QgsFillSymbol.createSimple(ESTILOS_FIXOS[nome])))
+    aplicarEstilo(camada)
+
+
+def criarEstruturaFixa(projeto):
+    """
+    Cria no projeto (salvo) o PreAnalise.gpkg com as camadas fixas que faltam e os grupos
+    Areas_Vizinhas, Apoio à Pré-Análise e Resultados da Pré-Análise, abaixo dos grupos existentes.
+    A Area_Consolidada só é criada se o projeto ainda não tiver camada de área consolidada.
+    """
+    if not projetoSalvo(projeto):
+        return False
+    gpkg = os.path.join(projeto.homePath(), ARQUIVO_FIXO)
+    temConsolidada = any(projeto.mapLayersByName(n) for n in CANDIDATOS['consolidada'])
+    raiz = projeto.layerTreeRoot()
+    for nomeGrupo, nomes in GRUPOS_FIXOS:
+        faltam = [n for n in nomes if camadaFixa(n, projeto) is None
+                  and not (n == 'Area_Consolidada' and temConsolidada)]
+        if not faltam:
+            continue
+        grupo = next((g for g in raiz.findGroups(True) if g.name().lower() == nomeGrupo.lower()), None)
+        if grupo is None:
+            indices = [i for i, filho in enumerate(raiz.children()) if isinstance(filho, QgsLayerTreeGroup)]
+            grupo = raiz.insertGroup(indices[-1] + 1 if indices else 0, nomeGrupo)
+        for nome in faltam:
+            geometria, campos = CAMADAS_FIXAS[nome]
+            memoria = QgsVectorLayer(f'{geometria}?crs=EPSG:4674', nome, 'memory')
+            memoria.dataProvider().addAttributes([QgsField(n, tipo) for n, tipo in campos])
+            memoria.updateFields()
+            opcoes = QgsVectorFileWriter.SaveVectorOptions()
+            opcoes.driverName = 'GPKG'
+            opcoes.layerName = nome
+            opcoes.fileEncoding = 'UTF-8'
+            acao = QgsVectorFileWriter.ActionOnExistingFile
+            opcoes.actionOnExistingFile = acao.CreateOrOverwriteLayer if os.path.exists(gpkg) else acao.CreateOrOverwriteFile
+            resultado = QgsVectorFileWriter.writeAsVectorFormatV3(memoria, gpkg, projeto.transformContext(), opcoes)
+            if resultado[0] != getattr(getattr(QgsVectorFileWriter, 'WriterError', QgsVectorFileWriter), 'NoError'):
+                raise QgsProcessingException(f'Erro ao criar a camada {nome} em {gpkg}: {resultado[1]}')
+            camada = QgsVectorLayer(f'{gpkg}|layername={nome}', nome, 'ogr')
+            estiloFixo(camada)
+            projeto.addMapLayer(camada, False)
+            no = grupo.addLayer(camada)
+            no.setCustomProperty('showFeatureCount', 1)
+    return True
+
+
+def garantirCamadaFixa(nome, projeto=None):
+    """Camada fixa da RAIZ; num projeto salvo sem ela, cria a estrutura fixa antes. None se não salvo."""
+    projeto = projeto or QgsProject.instance()
+    camada = camadaFixa(nome, projeto)
+    if camada is None and criarEstruturaFixa(projeto):
+        camada = camadaFixa(nome, projeto)
+    return camada
 
 
 def camadaFixa(nome, projeto=None):
@@ -123,14 +226,14 @@ def adicionarSaida(algoritmo, chave, rotulo, nomeCamada, tipo):
     Cria o parâmetro de saída. Com a camada fixa no projeto, a saída é opcional e vem desligada
     (o resultado já vai para a camada fixa); sem ela, grava por padrão em Pre-Analise/<nomeCamada>.gpkg.
     """
-    if camadaFixa(nomeCamada) is not None:
+    if camadaFixa(nomeCamada) is not None or projetoSalvo():
         algoritmo.addParameter(QgsProcessingParameterFeatureSink(
             chave, algoritmo.tr(f'{rotulo} — cópia opcional (o resultado já vai para a camada {nomeCamada})'),
             type=tipo, createByDefault=False, optional=True))
     else:
+        # Projeto ainda não salvo: sem pasta para o PreAnalise.gpkg, o resultado sai em camada temporária
         algoritmo.addParameter(QgsProcessingParameterFeatureSink(
-            chave, algoritmo.tr(rotulo), type=tipo, createByDefault=True, optional=True,
-            defaultValue=destinoPadrao(nomeCamada + '.gpkg')))
+            chave, algoritmo.tr(rotulo), type=tipo, createByDefault=True, optional=True))
 
 
 def gravarResultado(algoritmo, parameters, chave, context, feedback, camadaMemoria, nomeCamada):
@@ -138,7 +241,7 @@ def gravarResultado(algoritmo, parameters, chave, context, feedback, camadaMemor
     Grava o resultado na camada fixa da RAIZ (apagando as feições anteriores), se existir,
     e no parâmetro de saída, se ele foi pedido. Retorna o id da saída ou None.
     """
-    fixa = camadaFixa(nomeCamada, context.project())
+    fixa = garantirCamadaFixa(nomeCamada, context.project())
     if fixa is not None:
         total = substituirFeicoes(fixa, camadaMemoria)
         feedback.pushInfo(f'{nomeCamada}: {total} feição(ões) gravada(s) na camada do projeto '

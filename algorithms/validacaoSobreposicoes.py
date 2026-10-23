@@ -243,6 +243,6 @@ class ValidacaoSobreposicoesCAR(QgsProcessingAlgorithm):
 • <b>Sobreposição relevante</b> — demais casos: conflito de área (CAR duplicado, matrícula-mãe e desmembramentos, posse e propriedade declaradas em CARs diferentes).
 
 Os cálculos são feitos em <b>SIRGAS 2000 / UTM</b> do fuso do imóvel, escolhido automaticamente.
-<b>Estrutura RAIZ:</b> se o projeto tem as camadas fixas do <b>PreAnalise.gpkg</b>, os resultados vão direto para as camadas do grupo <b>Resultados da Pré-Análise</b>, apagando os anteriores; as saídas desta tela viram cópias opcionais. As entradas já vêm preenchidas com as camadas da RAIZ.
+<b>Resultados:</b> vão para as camadas do grupo <b>Resultados da Pré-Análise</b>, no <b>PreAnalise.gpkg</b> do projeto (criado na primeira execução, se ainda não existir), apagando os anteriores; as saídas desta tela são cópias opcionais. Com o projeto ainda não salvo, os resultados saem em camadas temporárias. As entradas já vêm preenchidas com as camadas da RAIZ.
 """ + avisoLegal()
         return txt + rodapeAjuda()
