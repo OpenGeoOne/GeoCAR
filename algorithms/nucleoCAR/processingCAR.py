@@ -138,7 +138,8 @@ def estiloFixo(camada):
     nome = camada.name()
     if nome == 'Problemas_Validacao':
         camada.setRenderer(QgsSingleSymbolRenderer(QgsMarkerSymbol.createSimple(
-            {'name': 'circle', 'color': '255,0,0', 'size': '3'})))
+            # Triângulo de alerta amarelo: não confunde com a Sede (círculo vermelho) das RAIZ
+            {'name': 'triangle', 'color': '255,215,0', 'outline_color': '0,0,0', 'outline_width': '0.4', 'size': '4.5'})))
     elif nome in ESTILOS_FIXOS:
         camada.setRenderer(QgsSingleSymbolRenderer(QgsFillSymbol.createSimple(ESTILOS_FIXOS[nome])))
     aplicarEstilo(camada)
