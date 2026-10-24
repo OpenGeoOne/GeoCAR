@@ -85,11 +85,11 @@ class AppHidricaCAR(QgsProcessingAlgorithm):
     ]
     # Nome da camada e do arquivo em Pre-Analise/
     NOMES_SAIDAS = {
-        OUTPUT_APP_INTEGRAL: '3b_APP_integral',
-        OUTPUT_FAIXA_ESCADINHA: '3b_faixa_escadinha',
-        OUTPUT_APP_RECOMPOR: '3b_APP_recompor_consolidada',
-        OUTPUT_USO_CONSOLIDADO: '3b_uso_consolidado_em_APP',
-        OUTPUT_APP_FORA_CONSOLIDADA: '3b_APP_fora_consolidada',
+        OUTPUT_APP_INTEGRAL: 'APP_Integral',
+        OUTPUT_FAIXA_ESCADINHA: 'Faixa_Escadinha',
+        OUTPUT_APP_RECOMPOR: 'APP_Recompor_Consolidada',
+        OUTPUT_USO_CONSOLIDADO: 'Uso_Consolidado_em_APP',
+        OUTPUT_APP_FORA_CONSOLIDADA: 'APP_Fora_Consolidada',
     }
 
     def initAlgorithm(self, config=None):

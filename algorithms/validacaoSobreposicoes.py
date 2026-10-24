@@ -96,9 +96,9 @@ class ValidacaoSobreposicoesCAR(QgsProcessingAlgorithm):
             type=Qgis.ProcessingNumberParameterType.Double, minValue=0.0, maxValue=100.0,
             defaultValue=PERC_DIVISA_PADRAO))
 
-        adicionarSaida(self, self.OUTPUT_PROBLEMAS, 'Problemas de validação', '3a_problemas',
+        adicionarSaida(self, self.OUTPUT_PROBLEMAS, 'Problemas de validação', 'Problemas_Validacao',
                        Qgis.ProcessingSourceType.VectorPoint)
-        adicionarSaida(self, self.OUTPUT_SOBREPOSICOES, 'Sobreposições', '3a_sobreposicoes', poligono)
+        adicionarSaida(self, self.OUTPUT_SOBREPOSICOES, 'Sobreposições', 'Sobreposicoes', poligono)
 
         self.addOutput(QgsProcessingOutputNumber(self.OUTPUT_N_PROBLEMAS,
                                                  self.tr('Número de problemas')))
@@ -163,9 +163,9 @@ class ValidacaoSobreposicoesCAR(QgsProcessingAlgorithm):
                               round(item['largura_m'], 2)])
 
         idProblemas = gravarResultado(self, parameters, self.OUTPUT_PROBLEMAS, context, feedback,
-                                      camadaProblemas, '3a_problemas')
+                                      camadaProblemas, 'Problemas_Validacao')
         idSobreposicoes = gravarResultado(self, parameters, self.OUTPUT_SOBREPOSICOES, context, feedback,
-                                          camadaSobreposicoes, '3a_sobreposicoes')
+                                          camadaSobreposicoes, 'Sobreposicoes')
 
         # Resumo no log
         areaSobreposta = sum(item['area_ha'] for item in sobreposicoes)

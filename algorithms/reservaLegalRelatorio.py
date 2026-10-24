@@ -94,14 +94,14 @@ class ReservaLegalRelatorioCAR(QgsProcessingAlgorithm):
 
     # Camadas da análise -> nomes dos resultados da 3a e da 3b (o perímetro em UTM não é gravado)
     CAMADAS_RESULTADO = {
-        'Problemas de validação': '3a_problemas',
-        'Sobreposições': '3a_sobreposicoes',
-        'APP integral (art. 4º)': '3b_APP_integral',
-        'Faixa escadinha (art. 61-A)': '3b_faixa_escadinha',
-        'APP a recompor em área consolidada': '3b_APP_recompor_consolidada',
-        'Uso consolidado mantido em APP': '3b_uso_consolidado_em_APP',
-        'APP fora de área consolidada': '3b_APP_fora_consolidada',
-        'Inconsistências': '3d_inconsistencias',
+        'Problemas de validação': 'Problemas_Validacao',
+        'Sobreposições': 'Sobreposicoes',
+        'APP integral (art. 4º)': 'APP_Integral',
+        'Faixa escadinha (art. 61-A)': 'Faixa_Escadinha',
+        'APP a recompor em área consolidada': 'APP_Recompor_Consolidada',
+        'Uso consolidado mantido em APP': 'Uso_Consolidado_em_APP',
+        'APP fora de área consolidada': 'APP_Fora_Consolidada',
+        'Inconsistências': 'Inconsistencias',
     }
 
     OUTPUT_RL_EXIGIDA = 'OUTPUT_RL_EXIGIDA'
@@ -185,7 +185,7 @@ class ReservaLegalRelatorioCAR(QgsProcessingAlgorithm):
             self.GERAR_CAMADAS,
             self.tr('Gerar também as camadas de resultado (as mesmas das ferramentas a e b)'),
             # Marcada quando a RAIZ tem as camadas fixas de resultado
-            defaultValue=camadaFixa('3a_sobreposicoes') is not None or projetoSalvo()))
+            defaultValue=camadaFixa('Sobreposicoes') is not None or projetoSalvo()))
 
         self.addOutput(QgsProcessingOutputNumber(self.OUTPUT_RL_EXIGIDA, self.tr('RL exigida (ha)')))
         self.addOutput(QgsProcessingOutputNumber(self.OUTPUT_VEGETACAO, self.tr('Vegetação nativa (ha)')))

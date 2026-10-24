@@ -92,7 +92,7 @@ class ConsistenciaCamadasCAR(QgsProcessingAlgorithm):
             self.INPUT_SERVIDOES, self.tr('Servidão administrativa (polígonos)'),
             layerType=poligono, optional=True, defaultValue=camadasPadrao('servidoes') or None))
 
-        adicionarSaida(self, self.OUTPUT_INCONSISTENCIAS, 'Inconsistências', '3d_inconsistencias', poligono)
+        adicionarSaida(self, self.OUTPUT_INCONSISTENCIAS, 'Inconsistências', 'Inconsistencias', poligono)
 
         self.addOutput(QgsProcessingOutputNumber(self.OUTPUT_N_ERROS, self.tr('Número de erros')))
         self.addOutput(QgsProcessingOutputNumber(self.OUTPUT_N_AVISOS, self.tr('Número de avisos')))
@@ -131,7 +131,7 @@ class ConsistenciaCamadasCAR(QgsProcessingAlgorithm):
             feedback.pushInfo(self.tr('Nenhuma inconsistência entre as camadas.'))
 
         idSaida = gravarResultado(self, parameters, self.OUTPUT_INCONSISTENCIAS, context, feedback,
-                                  camadaInconsistencias(itens, srcTrabalho), '3d_inconsistencias')
+                                  camadaInconsistencias(itens, srcTrabalho), 'Inconsistencias')
         feedback.pushInfo(self.tr('GeoCAR - GeoOne'))
         resultados = {self.OUTPUT_N_ERROS: erros, self.OUTPUT_N_AVISOS: len(itens) - erros}
         if idSaida:
@@ -180,7 +180,7 @@ class ConsistenciaCamadasCAR(QgsProcessingAlgorithm):
 • trecho de Reserva Legal sem vegetação nativa (a recompor)
 • área da ATI sem cobertura do solo declarada
 
-<b>Resultados:</b> vão para a camada <b>3d_inconsistencias</b> do grupo <b>Resultados da Pré-Análise</b>, no <b>Pre-Analise/PreAnalise.gpkg</b> do projeto (criado na primeira execução, se ainda não existir), apagando os anteriores. As entradas já vêm preenchidas com as camadas da RAIZ; confira as listas, pois os nomes variam entre os estados.
+<b>Resultados:</b> vão para a camada <b>Inconsistencias</b> do grupo <b>Resultados da Pré-Análise</b>, no <b>Pre-Analise/PreAnalise.gpkg</b> do projeto (criado na primeira execução, se ainda não existir), apagando os anteriores. As entradas já vêm preenchidas com as camadas da RAIZ; confira as listas, pois os nomes variam entre os estados.
 
 Os cálculos são feitos em <b>SIRGAS 2000 / UTM</b> do fuso do imóvel, escolhido automaticamente.
 """ + avisoLegal()

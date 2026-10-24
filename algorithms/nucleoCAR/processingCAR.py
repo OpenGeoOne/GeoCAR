@@ -27,6 +27,7 @@ VALORES_RL = [20.0, 35.0, 80.0]
 PASTA_RESULTADOS = 'Pre-Analise'
 GRUPO_RESULTADOS = 'Resultados da Pré-Análise'
 GRUPO_RESULTADOS_FIXO = GRUPO_RESULTADOS
+SUBGRUPO_APP = 'APP Hídrica'
 
 # Camadas fixas da estrutura RAIZ (vazias no modelo) ficam neste GeoPackage, na pasta Pre-Analise
 # do projeto, fora do GeoCAR*.gpkg
@@ -95,34 +96,35 @@ CAMADAS_FIXAS = {
     'Restricoes_Territoriais': ('MultiPolygon', [('tipo', _S), ('nome', _S), ('codigo', _S), ('situacao', _S),
                                                  ('data', _S), ('fonte', _S), ('consulta', _S)]),
     'Area_Consolidada': ('MultiPolygon', [('observacao', _S)]),
-    '3a_problemas': ('Point', [('feicao', _S), ('tipo', _S), ('descricao', _S)]),
-    '3a_sobreposicoes': ('MultiPolygon', [('camada', _S), ('identific', _S), ('classe', _S), ('area_ha', _D),
+    'Problemas_Validacao': ('Point', [('feicao', _S), ('tipo', _S), ('descricao', _S)]),
+    'Sobreposicoes': ('MultiPolygon', [('camada', _S), ('identific', _S), ('classe', _S), ('area_ha', _D),
                                           ('perc', _D), ('larg_med', _D)]),
-    '3b_APP_integral': ('MultiPolygon', [('area_ha', _D)]),
-    '3b_faixa_escadinha': ('MultiPolygon', [('area_ha', _D)]),
-    '3b_APP_recompor_consolidada': ('MultiPolygon', [('area_ha', _D)]),
-    '3b_uso_consolidado_em_APP': ('MultiPolygon', [('area_ha', _D)]),
-    '3b_APP_fora_consolidada': ('MultiPolygon', [('area_ha', _D)]),
-    '3d_inconsistencias': ('MultiPolygon', [('gravidade', _S), ('tipo', _S), ('camadas', _S), ('area_ha', _D),
+    'APP_Integral': ('MultiPolygon', [('area_ha', _D)]),
+    'Faixa_Escadinha': ('MultiPolygon', [('area_ha', _D)]),
+    'APP_Recompor_Consolidada': ('MultiPolygon', [('area_ha', _D)]),
+    'Uso_Consolidado_em_APP': ('MultiPolygon', [('area_ha', _D)]),
+    'APP_Fora_Consolidada': ('MultiPolygon', [('area_ha', _D)]),
+    'Inconsistencias': ('MultiPolygon', [('gravidade', _S), ('tipo', _S), ('camadas', _S), ('area_ha', _D),
                                             ('descricao', _S)]),
 }
 GRUPOS_FIXOS = [
     ('Areas_Vizinhas', ['CAR_Vizinhos_SICAR', 'Restricoes_Territoriais']),
     ('Apoio à Pré-Análise', ['Area_Consolidada']),
-    (GRUPO_RESULTADOS_FIXO, ['3a_problemas', '3a_sobreposicoes', '3b_APP_integral', '3b_faixa_escadinha',
-                             '3b_APP_recompor_consolidada', '3b_uso_consolidado_em_APP', '3b_APP_fora_consolidada',
-                             '3d_inconsistencias']),
+    (GRUPO_RESULTADOS_FIXO, ['Problemas_Validacao', 'Sobreposicoes', 'Inconsistencias']),
+    # Subgrupo com as camadas da APP hídrica (ferramenta b)
+    (GRUPO_RESULTADOS_FIXO + '/' + SUBGRUPO_APP, ['APP_Integral', 'Faixa_Escadinha', 'APP_Recompor_Consolidada',
+                                                  'Uso_Consolidado_em_APP', 'APP_Fora_Consolidada']),
 ]
 ESTILOS_FIXOS = {
     'CAR_Vizinhos_SICAR': {'color': '0,0,0,0', 'outline_color': '255,255,0', 'outline_width': '0.6'},
     'Restricoes_Territoriais': {'color': '255,0,255,40', 'outline_color': '200,0,200', 'outline_width': '0.6',
                                 'outline_style': 'dash'},
     'Area_Consolidada': {'color': '230,200,120,110', 'outline_color': '180,140,60', 'outline_width': '0.4'},
-    '3b_APP_integral': {'color': '0,160,255,90', 'outline_color': '0,100,200', 'outline_width': '0.4'},
-    '3b_faixa_escadinha': {'color': '0,90,200,120', 'outline_color': '0,60,160', 'outline_width': '0.4'},
-    '3b_APP_recompor_consolidada': {'color': '255,120,0,130', 'outline_color': '200,80,0', 'outline_width': '0.4'},
-    '3b_uso_consolidado_em_APP': {'color': '255,230,0,120', 'outline_color': '200,170,0', 'outline_width': '0.4'},
-    '3b_APP_fora_consolidada': {'color': '0,200,200,100', 'outline_color': '0,140,140', 'outline_width': '0.4'},
+    'APP_Integral': {'color': '0,160,255,90', 'outline_color': '0,100,200', 'outline_width': '0.4'},
+    'Faixa_Escadinha': {'color': '0,90,200,120', 'outline_color': '0,60,160', 'outline_width': '0.4'},
+    'APP_Recompor_Consolidada': {'color': '255,120,0,130', 'outline_color': '200,80,0', 'outline_width': '0.4'},
+    'Uso_Consolidado_em_APP': {'color': '255,230,0,120', 'outline_color': '200,170,0', 'outline_width': '0.4'},
+    'APP_Fora_Consolidada': {'color': '0,200,200,100', 'outline_color': '0,140,140', 'outline_width': '0.4'},
 }
 
 
@@ -134,12 +136,37 @@ def projetoSalvo(projeto=None):
 def estiloFixo(camada):
     """Estilo padrão das camadas fixas."""
     nome = camada.name()
-    if nome == '3a_problemas':
+    if nome == 'Problemas_Validacao':
         camada.setRenderer(QgsSingleSymbolRenderer(QgsMarkerSymbol.createSimple(
             {'name': 'circle', 'color': '255,0,0', 'size': '3'})))
     elif nome in ESTILOS_FIXOS:
         camada.setRenderer(QgsSingleSymbolRenderer(QgsFillSymbol.createSimple(ESTILOS_FIXOS[nome])))
     aplicarEstilo(camada)
+
+
+def grupoPorCaminho(raiz, caminho):
+    """
+    Grupo da árvore de camadas pelo caminho "Grupo" ou "Grupo/Subgrupo", criando o que faltar.
+    O grupo principal novo fica abaixo do último grupo da raiz; o subgrupo novo, no fim do grupo.
+    """
+    partes = caminho.split('/')
+    grupo = next((g for g in raiz.children() if isinstance(g, QgsLayerTreeGroup)
+                  and g.name().lower() == partes[0].lower()), None)
+    if grupo is None:
+        grupo = next((g for g in raiz.findGroups(True) if g.name().lower() == partes[0].lower()), None)
+    if grupo is None:
+        indices = [i for i, filho in enumerate(raiz.children()) if isinstance(filho, QgsLayerTreeGroup)]
+        grupo = raiz.insertGroup(indices[-1] + 1 if indices else 0, partes[0])
+    for nome in partes[1:]:
+        filho = next((g for g in grupo.children() if isinstance(g, QgsLayerTreeGroup)
+                      and g.name().lower() == nome.lower()), None)
+        grupo = filho if filho is not None else grupo.addGroup(nome)
+    return grupo
+
+
+def grupoDaCamada(nomeCamada, padrao=GRUPO_RESULTADOS):
+    """Caminho do grupo fixo de uma camada de resultado."""
+    return next((g for g, nomes in GRUPOS_FIXOS if nomeCamada in nomes), padrao)
 
 
 def criarEstruturaFixa(projeto):
@@ -160,10 +187,7 @@ def criarEstruturaFixa(projeto):
                   and not (n == 'Area_Consolidada' and temConsolidada)]
         if not faltam:
             continue
-        grupo = next((g for g in raiz.findGroups(True) if g.name().lower() == nomeGrupo.lower()), None)
-        if grupo is None:
-            indices = [i for i, filho in enumerate(raiz.children()) if isinstance(filho, QgsLayerTreeGroup)]
-            grupo = raiz.insertGroup(indices[-1] + 1 if indices else 0, nomeGrupo)
+        grupo = grupoPorCaminho(raiz, nomeGrupo)
         for nome in faltam:
             geometria, campos = CAMADAS_FIXAS[nome]
             memoria = QgsVectorLayer(f'{geometria}?crs=EPSG:4674', nome, 'memory')
@@ -425,10 +449,7 @@ def moverParaGrupo(projeto, idCamada, nomeGrupo):
     if camada is None:
         return
     raiz = projeto.layerTreeRoot()
-    grupo = next((g for g in raiz.findGroups(True) if g.name().lower() == nomeGrupo.lower()), None)
-    if grupo is None:
-        indices = [i for i, filho in enumerate(raiz.children()) if isinstance(filho, QgsLayerTreeGroup)]
-        grupo = raiz.insertGroup(indices[-1] + 1 if indices else 0, nomeGrupo)
+    grupo = grupoPorCaminho(raiz, nomeGrupo)
 
     # Resultado temporário anterior com o mesmo nome (os gravados em arquivo já saem em prepararDestino)
     for no in list(grupo.findLayers()):
@@ -487,7 +508,7 @@ def gravarCamadaNoSink(algoritmo, parameters, chave, context, camadaMemoria, nom
     for feicao in camadaMemoria.getFeatures():
         sink.addFeature(QgsFeature(feicao), QgsFeatureSink.FastInsert)
     if nomeCamada:
-        definirPosProcessamento(context, destId, nomeCamada, nomeGrupo)
+        definirPosProcessamento(context, destId, nomeCamada, grupoDaCamada(nomeCamada, nomeGrupo))
     return destId
 
 
@@ -510,7 +531,7 @@ def gravarECarregarResultado(context, camadaMemoria, nomeCamada, nomeGrupo=GRUPO
         raise QgsProcessingException(f'Erro ao gravar {caminho}: {resultado[1]}')
 
     detalhes = QgsProcessingContext.LayerDetails(nomeCamada, context.project() or QgsProject.instance(), nomeCamada)
-    pos = PosProcessamentoGrupo(nomeCamada, nomeGrupo)
+    pos = PosProcessamentoGrupo(nomeCamada, grupoDaCamada(nomeCamada, nomeGrupo))
     _posProcessadores[caminho] = pos
     detalhes.setPostProcessor(pos)
     context.addLayerToLoadOnCompletion(caminho, detalhes)
