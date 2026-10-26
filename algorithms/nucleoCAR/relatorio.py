@@ -80,8 +80,11 @@ def _plano_acao(r):
     relevantes = [s for s in r["sobreposicoes"] if s["classe"] == "Sobreposição relevante"]
     divisas = [s for s in r["sobreposicoes"] if s["classe"] == "Ajuste de divisa"]
     apas = [s for s in r["sobreposicoes"] if s["classe"].startswith("Informativa")]
+    ca = r.get("car_anterior") or {}
     for s in relevantes:
         ident = s["identificador"] or f"fid {s['feicao']}"
+        if ca.get("provavel") and ca.get("codigo") and ca["codigo"] in ident.upper():
+            continue   # tratado abaixo, como provável CAR do mesmo imóvel
         if ":" in ident:   # restrição oficial (UC, Terra Indígena, assentamento, embargo, floresta pública)
             bloqueia.append(f"Sobreposição de {h(s['area_ha'])} ha ({h(s['percentual'])}% do imóvel) com {ident}: "
                             f"verificar a restrição no órgão responsável, pois pode impedir ou condicionar o uso.")
@@ -200,6 +203,22 @@ def _plano_acao(r):
             if sg["fora_ati_ha"] > 0.01 * r["area_imovel_ha"]:
                 recompor.append(f"As parcelas certificadas do imóvel têm {h(sg['fora_ati_ha'])} ha fora da ATI: a ATI "
                                 f"está menor que o imóvel certificado; conferir se deve seguir o perímetro do SIGEF.")
+
+    # CAR atual do imóvel (retificação)
+    ca = r.get("car_anterior")
+    if ca is not None:
+        if not ca.get("encontrado"):
+            atencao.append(f"O CAR informado ({ca['codigo']}) não foi encontrado na consulta do SICAR em volta da ATI: "
+                           f"confira o código ou rode de novo a Consulta CAR (1a); o cadastro pode estar cancelado.")
+        elif ca.get("provavel"):
+            bloqueia.append(f"O CAR {ca['codigo']} ({ca['status']}) cobre {_n(ca['perc_ati'], 1)}% da ATI, e "
+                            f"{_n(ca['perc_car'], 1)}% dele está dentro dela: é provavelmente o CAR deste mesmo imóvel "
+                            f"(retificação) ou um CAR duplicado. Se for retificação, informe o código em \"Código do CAR "
+                            f"atual do imóvel\" e refaça a análise; se for de outra pessoa, é cadastro duplicado.")
+        else:
+            ajustes.append(f"Retificação do CAR {ca['codigo']}: a nova ATI acrescenta {h(ca['acrescida_ha'])} ha e "
+                           f"retira {h(ca['retirada_ha'])} ha em relação ao CAR atual. Justifique a mudança de perímetro "
+                           f"(novo levantamento, certificação no SIGEF, matrícula): o órgão ambiental compara as versões.")
 
     # Desmatamento depois de 22/07/2008 (PRODES)
     ds = r.get("desmatamento")
@@ -485,6 +504,26 @@ def gerar_relatorio_html(r, caminho):
                       "de cerca de 1 ha. A ausência de polígono não prova que não houve supressão: confira com imagens "
                       "históricas. Desmatamento detectado em 2008 fica a confirmar, pois pode ser anterior ou "
                       "posterior a 22/07/2008.</p>")
+
+    # CAR atual do imóvel (retificação)
+    ca = r.get("car_anterior")
+    if ca is not None and ca.get("encontrado"):
+        titulo = "Comparação com o CAR atual do imóvel" if ca["confirmado"] else "Provável CAR do mesmo imóvel"
+        partes.append(f"<h2>9. {titulo}</h2>")
+        partes.append(_tabela(["Item", "Valor"], [
+            ["Código do CAR", ca["codigo"]],
+            ["Situação no SICAR", " — ".join(v for v in (ca["status"], ca["condicao"]) if v)],
+            ["Inscrito em", ca["criacao"] or "-"],
+            ["Área declarada no CAR atual (ha)", _n(ca["area_declarada"]) if ca["area_declarada"] is not None else "-"],
+            ["Área do CAR atual medida (ha)", _n(ca["area_car_ha"])],
+            ["Área da nova ATI (ha)", _n(ca["area_ati_ha"])],
+            ["Área em comum (ha)", f"{_n(ca['comum_ha'])} ({_n(ca['perc_ati'], 1)}% da ATI)"],
+            ["Acrescida pela nova ATI (ha)", _n(ca["acrescida_ha"])],
+            ["Retirada em relação ao CAR atual (ha)", _n(ca["retirada_ha"])],
+        ], colunas_num=(1,)))
+        if ca["confirmado"]:
+            partes.append("<p>Na retificação, o CAR atual não conta como sobreposição. As áreas acrescidas e retiradas "
+                          "estão na camada Comparacao_CAR_Atual.</p>")
 
     partes.append(
         "<p class='nota'>Pré-análise técnica automatizada, de caráter indicativo. Não substitui "

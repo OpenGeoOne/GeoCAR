@@ -104,6 +104,7 @@ CAMADAS_FIXAS = {
     'RL_Rascunho': ('MultiPolygon', [('origem', _S), ('area_ha', _D)]),
     'Desmatamento_PRODES': ('MultiPolygon', [('bioma', _S), ('ano', _I), ('data_imagem', _S), ('periodo', _S),
                                              ('area_ha', _D), ('fonte', _S), ('consulta', _S)]),
+    'Comparacao_CAR_Atual': ('MultiPolygon', [('tipo', _S), ('codigo', _S), ('area_ha', _D)]),
     'Desmatamento_Pos_2008': ('MultiPolygon', [('tipo', _S), ('ano', _I), ('data_imagem', _S), ('area_ha', _D)]),
     'Problemas_Validacao': ('Point', [('feicao', _S), ('tipo', _S), ('descricao', _S)]),
     'Sobreposicoes': ('MultiPolygon', [('camada', _S), ('identific', _S), ('classe', _S), ('area_ha', _D),
@@ -120,7 +121,7 @@ GRUPOS_FIXOS = [
     ('Areas_Vizinhas', ['CAR_Vizinhos_SICAR', 'Restricoes_Territoriais', 'Parcelas_SIGEF', 'Desmatamento_PRODES']),
     ('Apoio à Pré-Análise', ['Area_Consolidada', 'RL_Rascunho']),
     (GRUPO_RESULTADOS_FIXO, ['Problemas_Validacao', 'Sobreposicoes', 'Inconsistencias', 'Divergencias_SIGEF',
-                              'Desmatamento_Pos_2008']),
+                              'Desmatamento_Pos_2008', 'Comparacao_CAR_Atual']),
     # Subgrupo com as camadas da APP hídrica (ferramenta b)
     (GRUPO_RESULTADOS_FIXO + '/' + SUBGRUPO_APP, ['APP_Integral', 'Faixa_Escadinha', 'APP_Recompor_Consolidada',
                                                   'Uso_Consolidado_em_APP', 'APP_Fora_Consolidada']),
@@ -439,6 +440,14 @@ def aplicarEstilo(camada):
                                                                 'outline_width': '0.4'}), v)
             for v, cor, borda in cores]))
         return
+    if camada.name() == 'Comparacao_CAR_Atual':
+        cores = [('Acrescida na retificação', '0,170,60,120', '0,110,40'),
+                 ('Retirada na retificação', '220,0,0,90', '160,0,0')]
+        camada.setRenderer(QgsCategorizedSymbolRenderer('tipo', [
+            QgsRendererCategory(v, QgsFillSymbol.createSimple({'color': cor, 'outline_color': borda,
+                                                                'outline_width': '0.6'}), v)
+            for v, cor, borda in cores]))
+        return
     if camada.name() == 'Desmatamento_Pos_2008':
         cores = [('Área consolidada sobre desmatamento após 2008', '220,0,0,170', '140,0,0'),
                  ('Reserva Legal desmatada após 2008', '170,0,170,150', '110,0,110'),
@@ -478,6 +487,9 @@ def aplicarEstilo(camada):
         QgsRendererCategory('Informativa (APA)', QgsFillSymbol.createSimple(
             {'color': '0,0,0,0', 'outline_color': '0,150,0', 'outline_width': '0.5', 'outline_style': 'dash'}),
             'Informativa (APA)'),
+        QgsRendererCategory('CAR do próprio imóvel (retificação)', QgsFillSymbol.createSimple(
+            {'color': '0,0,0,0', 'outline_color': '0,120,255', 'outline_width': '0.6', 'outline_style': 'dash'}),
+            'CAR do próprio imóvel (retificação)'),
     ]
     camada.setRenderer(QgsCategorizedSymbolRenderer('classe', categorias))
 

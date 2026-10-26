@@ -81,6 +81,7 @@ class ReservaLegalRelatorioCAR(QgsProcessingAlgorithm):
     INPUT_SERVIDOES = 'INPUT_SERVIDOES'
     INPUT_SIGEF = 'INPUT_SIGEF'
     INPUT_PRODES = 'INPUT_PRODES'
+    CODIGO_CAR = 'CODIGO_CAR'
     AUTO_CONSULTAS = 'AUTO_CONSULTAS'
     IMOVEL = 'IMOVEL'
     MUNICIPIO_UF = 'MUNICIPIO_UF'
@@ -107,6 +108,7 @@ class ReservaLegalRelatorioCAR(QgsProcessingAlgorithm):
         'Inconsistências': 'Inconsistencias',
         'Divergências SIGEF': 'Divergencias_SIGEF',
         'Desmatamento após 2008': 'Desmatamento_Pos_2008',
+        'Comparação com o CAR atual': 'Comparacao_CAR_Atual',
     }
 
     OUTPUT_RL_EXIGIDA = 'OUTPUT_RL_EXIGIDA'
@@ -124,6 +126,8 @@ class ReservaLegalRelatorioCAR(QgsProcessingAlgorithm):
         for chave, rotulo in self.IDENTIFICACAO:
             self.addParameter(QgsProcessingParameterString(
                 chave, self.tr(f'{rotulo} — no relatório (opcional)'), optional=True))
+        self.addParameter(QgsProcessingParameterString(
+            self.CODIGO_CAR, self.tr('Código do CAR atual do imóvel — só em retificação (opcional)'), optional=True))
         self.addParameter(QgsProcessingParameterNumber(
             self.MODULO_FISCAL, self.tr('Módulo fiscal do município (ha) — 0 = automático pelos CARs vizinhos'),
             type=decimal, minValue=0.0, defaultValue=0.0))
@@ -271,6 +275,7 @@ class ReservaLegalRelatorioCAR(QgsProcessingAlgorithm):
             'sigef': [c for c in [camadaSigef] if c is not None],
             'prodes': [c for c in [camadaProdes] if c is not None],
             'outras': self._camadasDeclaradas(),
+            'codigo_car': self.parameterAsString(parameters, self.CODIGO_CAR, context).strip(),
             'caminho_relatorio': caminhoHtml,
             'identificacao': {rotulo: self.parameterAsString(parameters, chave, context).strip()
                               for chave, rotulo in self.IDENTIFICACAO},

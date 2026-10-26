@@ -86,6 +86,14 @@ def executar(p):
     sobreposicoes = analisar_sobreposicoes(perimetro, area_imovel, p["restricoes"], src,
                                            largura_divisa, perc_divisa)
 
+    # --- 2a. CAR atual do imóvel (retificação) ---
+    from .car_anterior import CLASSE_PROPRIO, comparar_car_anterior
+    car_anterior = comparar_car_anterior(perimetro, src, p["restricoes"], p.get("codigo_car"))
+    if car_anterior is not None and car_anterior.get("confirmado"):
+        for s in sobreposicoes:
+            if car_anterior["codigo"] and car_anterior["codigo"] in (s["identificador"] or "").upper():
+                s["classe"] = CLASSE_PROPRIO
+
     # --- 2b. Consistência entre camadas (coberturas, Reserva Legal e servidões) ---
     consistencia = verificar_consistencia(perimetro, src, p["vegetacao"], p.get("coberturas") or [],
                                           p.get("reservas") or [], p.get("servidoes") or [])
@@ -170,6 +178,13 @@ def executar(p):
                                                         round(item["area_ha"], 4)])
         camadas.append(c_sig)
 
+    if car_anterior is not None and car_anterior.get("itens"):
+        c_car = criar_camada_memoria("Comparação com o CAR atual", "MultiPolygon", src,
+                                     [("tipo", "string"), ("codigo", "string"), ("area_ha", "double")])
+        for item in car_anterior["itens"]:
+            adicionar_feicao(c_car, item["geometria"], [item["tipo"], car_anterior["codigo"],
+                                                        round(item["area_ha"], 4)])
+        camadas.append(c_car)
     if desmatamento is not None:
         c_des = criar_camada_memoria("Desmatamento após 2008", "MultiPolygon", src,
                                      [("tipo", "string"), ("ano", "integer"), ("data_imagem", "string"),
@@ -217,6 +232,7 @@ def executar(p):
         "sigef": sigef,
         "desmatamento": desmatamento,
         "quadro": quadro,
+        "car_anterior": car_anterior,
         "rl": res_rl,
     }
 
