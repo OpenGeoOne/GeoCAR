@@ -318,6 +318,8 @@ class ReservaLegalRelatorioCAR(QgsProcessingAlgorithm):
 • APP hídrica integral, faixa da escadinha e teto do art. 61-B
 • Reserva Legal
 
+A <b>primeira página</b> do relatório é o resumo <b>O que corrigir</b>, montado a partir dos resultados: o que resolver antes de enviar, ajustes pequenos, o que recompor e conferir, e restrições próximas para ficar atento.
+
 A opção <b>Gerar também as camadas de resultado</b> preenche as mesmas camadas das ferramentas <b>a</b>, <b>b</b> e <b>d</b>. Ela já vem marcada e grava nas camadas do grupo <b>Resultados da Pré-Análise</b>, no <b>Pre-Analise/PreAnalise.gpkg</b> do projeto (criado na primeira execução, se ainda não existir), apagando os resultados anteriores. O relatório fica na pasta <b>Pre-Analise/</b>. As entradas já vêm preenchidas com as camadas da RAIZ.
 
 <b>Reserva Legal:</b>

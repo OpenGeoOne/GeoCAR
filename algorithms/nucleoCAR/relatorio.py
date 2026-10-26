@@ -7,6 +7,8 @@ CSS = """
 body { font-family: Segoe UI, Arial, sans-serif; margin: 32px; color: #1f2933; max-width: 960px; }
 h1 { color: #2e7d32; border-bottom: 3px solid #2e7d32; padding-bottom: 6px; }
 h2 { color: #1b5e20; margin-top: 32px; }
+h3 { color: #1b5e20; margin: 16px 0 4px; }
+li { margin: 3px 0; }
 table { border-collapse: collapse; width: 100%; margin: 8px 0 16px; font-size: 14px; }
 th, td { border: 1px solid #cfd8dc; padding: 6px 8px; text-align: left; }
 th { background: #e8f5e9; }
@@ -24,6 +26,8 @@ body { font-family: Arial, sans-serif; font-size: 8pt; color: #1f2933; }
 p { font-size: 8pt; margin: 2px 0; }
 h1 { font-size: 15pt; color: #2e7d32; margin: 0 0 2px 0; }
 h2 { font-size: 11pt; color: #1b5e20; margin: 10px 0 3px 0; }
+h3 { font-size: 9pt; color: #1b5e20; margin: 6px 0 1px 0; }
+ul { margin: 0 0 2px 0; } li { font-size: 8pt; margin: 1px 0; }
 th, td { font-size: 7.5pt; border: 1px solid #cfd8dc; padding: 1px 3px; text-align: left; }
 th { background: #e8f5e9; }
 td.num { text-align: right; }
@@ -56,6 +60,135 @@ def _tabela(cabecalho, linhas, colunas_num=()):
     return "".join(html)
 
 
+def _plano_acao(r):
+    """
+    "O que corrigir": as pendências da análise, em ordem de prioridade, montadas a partir dos resultados.
+    Retorna o HTML da seção.
+    """
+    h = lambda v: _n(v, 2)
+    bloqueia, ajustes, recompor, atencao = [], [], [], []
+
+    # Validação geométrica
+    if r["problemas"]:
+        tipos = sorted({x["tipo"] for x in r["problemas"]})
+        bloqueia.append(f"Corrigir {len(r['problemas'])} problema(s) geométrico(s): {', '.join(tipos)} "
+                        f"(camada Problemas_Validacao).")
+
+    # Sobreposições
+    relevantes = [s for s in r["sobreposicoes"] if s["classe"] == "Sobreposição relevante"]
+    divisas = [s for s in r["sobreposicoes"] if s["classe"] == "Ajuste de divisa"]
+    apas = [s for s in r["sobreposicoes"] if s["classe"].startswith("Informativa")]
+    for s in relevantes:
+        ident = s["identificador"] or f"fid {s['feicao']}"
+        if ":" in ident:   # restrição oficial (UC, Terra Indígena, assentamento, embargo, floresta pública)
+            bloqueia.append(f"Sobreposição de {h(s['area_ha'])} ha ({h(s['percentual'])}% do imóvel) com {ident}: "
+                            f"verificar a restrição no órgão responsável, pois pode impedir ou condicionar o uso.")
+        else:
+            bloqueia.append(f"Sobreposição de {h(s['area_ha'])} ha ({h(s['percentual'])}% do imóvel) com {s['camada']} "
+                            f"{ident}: conferir matrícula, escritura, SIGEF e CCIR dos dois imóveis. Se o outro cadastro "
+                            f"estiver errado, o titular dele precisa retificar ou cancelar; se o erro for desta ATI, "
+                            f"retificá-la.")
+    if divisas:
+        larguras = [s["largura_m"] for s in divisas]
+        ajustes.append(f"{len(divisas)} faixa(s) de ajuste de divisa, {h(sum(s['area_ha'] for s in divisas))} ha, "
+                       f"com largura média de {_n(min(larguras), 1)} a {_n(max(larguras), 1)} m: vale o limite mais "
+                       f"preciso. Mantenha a ATI se ela vier de levantamento georreferenciado ou do SIGEF; se foi "
+                       f"digitalizada sobre imagem, encoste no limite do vizinho.")
+
+    # Consistência entre camadas
+    for i in r.get("consistencia") or []:
+        texto = f"{i['tipo']} ({i['camadas']}): {h(i['area_ha'])} ha."
+        if i["gravidade"] == "Erro":
+            bloqueia.append(texto + " Corrigir as camadas declaradas.")
+        elif i["tipo"].startswith("Reserva Legal sem vegetação"):
+            recompor.append(f"Reserva Legal sem vegetação nativa: {h(i['area_ha'])} ha a recompor (PRA).")
+        elif i["tipo"].startswith("Área sem cobertura"):
+            ajustes.append(f"{h(i['area_ha'])} ha da ATI sem cobertura do solo declarada: classificar essas áreas em "
+                           f"vegetação nativa, área consolidada ou pousio.")
+        else:
+            ajustes.append(texto)
+
+    # Reserva Legal
+    rl = r["rl"]
+    declarada = rl.get("declarada_ha")
+    if declarada is not None and declarada < rl["exigida_ha"] - 0.0001:
+        suficiente = rl["vegetacao_fora_app_ha"] >= rl["exigida_ha"]
+        base = (f"há {h(rl['vegetacao_fora_app_ha'])} ha de vegetação nativa fora de APP, suficientes para desenhar "
+                f"toda a RL sobre vegetação" if suficiente else
+                f"há só {h(rl['vegetacao_fora_app_ha'])} ha de vegetação nativa fora de APP")
+        if declarada <= 0.0001:
+            bloqueia.append(f"Reserva Legal não declarada: a exigida é de {h(rl['exigida_ha'])} ha "
+                            f"({_n(rl['percentual'], 0)}%); {base}.")
+        else:
+            bloqueia.append(f"Reserva Legal declarada ({h(declarada)} ha) menor que a exigida "
+                            f"({h(rl['exigida_ha'])} ha); {base}.")
+    if rl["deficit_com_app_ha"] > 0.0001:
+        if r["n_modulos"] <= 4:
+            recompor.append(f"Déficit de RL de {h(rl['deficit_com_app_ha'])} ha, mas o imóvel tinha até 4 MF em "
+                            f"22/07/2008: pelo art. 67, a RL pode ficar com a vegetação existente naquela data.")
+        else:
+            recompor.append(f"Déficit de RL de {h(rl['deficit_com_app_ha'])} ha: recompor, regenerar ou compensar "
+                            f"(art. 66), pelo PRA.")
+
+    # APP hídrica
+    a = r["app"]
+    if a["integral_ha"] > 0:
+        if a["tem_consolidada"] and a["recompor_ha"] > 0.0001:
+            recompor.append(f"Recompor {h(a['recompor_ha'])} ha da faixa da escadinha (art. 61-A) dentro da área "
+                            f"consolidada, pela adesão ao PRA.")
+        if a["tem_vegetacao"]:
+            onde = "fora da área consolidada" if a["tem_consolidada"] else ""
+            if a["fora_sem_vegetacao_ha"] > 0.0001:
+                recompor.append(f"Recompor {h(a['fora_sem_vegetacao_ha'])} ha de APP {onde} sem vegetação nativa "
+                                f"(faixa integral do art. 4º).".replace("  ", " "))
+            recompor.append(f"Total de APP a recompor de fato: {h(a['recompor_real_ha'])} ha; o restante dos "
+                            f"{h(a['recompor_total_ha'])} ha a preservar ou recompor já tem vegetação.")
+        else:
+            recompor.append("Vegetação nativa não informada: não foi possível separar a APP que já está vegetada.")
+        if a["tem_consolidada"] and a["limite_61b_ha"] is not None:
+            excede = a["recompor_total_ha"] > a["limite_61b_ha"]
+            recompor.append(f"Teto do art. 61-B: {h(a['limite_61b_ha'])} ha — "
+                            + ("a recomposição fica limitada a esse teto." if excede else "dentro do limite."))
+        if a["tem_consolidada"] and a["liberada_ha"] > 0.0001:
+            recompor.append(f"Uso consolidado em APP ({h(a['liberada_ha'])} ha) pode continuar (art. 61-A), com "
+                            f"práticas de conservação do solo e da água.")
+        if not a["tem_consolidada"]:
+            recompor.append("Área consolidada não informada: a APP foi calculada no cenário integral. Se houver uso "
+                            "anterior a 22/07/2008, informe a camada e refaça a análise.")
+    for aviso in a["avisos"]:
+        if "largura" in aviso:
+            recompor.append(f"Conferir em campo a largura dos cursos d'água: {aviso}")
+    if r.get("modulo_automatico"):
+        recompor.append(f"Conferir na tabela do INCRA o módulo fiscal ({h(r['modulo_fiscal_ha'])} ha), obtido dos "
+                        f"CARs vizinhos.")
+
+    # Atenção
+    if apas:
+        nomes = "; ".join(s["identificador"].split(":", 1)[-1].strip() for s in apas)
+        atencao.append(f"Imóvel em Área de Proteção Ambiental ({nomes}): não impede o CAR; conferir o zoneamento e o "
+                       f"plano de manejo antes de mudanças de uso.")
+    vistas = set()
+    for p in r.get("restricoes_proximas") or []:
+        chave = (p["tipo"], p["nome"])
+        if chave in vistas:
+            continue
+        vistas.add(chave)
+        nota = " (provável zona de amortecimento; pesa em licenciamento)" if p["tipo"].startswith("Unidade") else ""
+        atencao.append(f"{p['tipo']} a {_n(p['distancia_m'] / 1000.0, 1)} km: {p['nome']}{nota}. Não toca o imóvel.")
+
+    # HTML
+    partes = ["<h2>O que corrigir</h2>"]
+    if bloqueia:
+        partes.append(f"<p class='alerta'>{len(bloqueia)} pendência(s) a resolver antes do envio ao CAR.</p>")
+    else:
+        partes.append("<p class='ok'>Nenhuma pendência impede o envio ao CAR.</p>")
+    for titulo, itens in (("Resolver antes de enviar", bloqueia), ("Ajustes pequenos", ajustes),
+                          ("Recompor e conferir", recompor), ("Ficar atento", atencao)):
+        if itens:
+            partes.append(f"<h3>{titulo}</h3><ul>" + "".join(f"<li>{escape(i)}</li>" for i in itens) + "</ul>")
+    return "".join(partes)
+
+
 def gerar_relatorio_html(r, caminho):
     """Gera o relatório a partir do resumo da análise: PDF se o caminho terminar em .pdf, senão HTML."""
     partes = [
@@ -65,8 +198,12 @@ def gerar_relatorio_html(r, caminho):
         f"<p>Gerado em {escape(r['data'])} — camada <b>{escape(r['camada_perimetro'])}</b></p>",
     ]
 
+    # Plano de correções: o resumo do que fazer, antes dos detalhes
+    partes.append(_plano_acao(r))
+
     # Dados do imóvel
-    partes.append("<h2>1. Dados do imóvel</h2>")
+    # Os detalhes começam em nova página: a primeira fica com o resumo do que corrigir
+    partes.append("<h2 style='page-break-before: always'>1. Dados do imóvel</h2>")
     identificacao = [[rotulo, valor] for rotulo, valor in (r.get("identificacao") or {}).items() if valor]
     partes.append(_tabela(["Item", "Valor"], identificacao + [
         ["Área do imóvel (ha)", _n(r["area_imovel_ha"])],
@@ -223,13 +360,17 @@ def _evitarTabelasQuebradas(documento, alturaPagina):
             retangulo = layout.frameBoundingRect(quadro)
             if retangulo.height() >= alturaPagina:
                 continue   # maior que uma página: não há como evitar
-            if int(retangulo.top() // alturaPagina) == int((retangulo.bottom() - 1) // alturaPagina):
-                continue
             # Título (h2) da seção da tabela
             bloco = documento.findBlock(quadro.firstPosition()).previous()
             while bloco.isValid() and bloco.blockFormat().headingLevel() != 2:
                 bloco = bloco.previous()
             if not bloco.isValid() or bloco.blockFormat().pageBreakPolicy() & sempreAntes:
+                continue
+            paginaTitulo = int(layout.blockBoundingRect(bloco).top() // alturaPagina)
+            paginaInicio = int(retangulo.top() // alturaPagina)
+            paginaFim = int((retangulo.bottom() - 1) // alturaPagina)
+            # Tabela inteira na mesma página do seu título: nada a fazer
+            if paginaTitulo == paginaInicio == paginaFim:
                 continue
             cursor = QTextCursor(bloco)
             formato = bloco.blockFormat()

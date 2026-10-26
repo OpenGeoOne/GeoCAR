@@ -16,7 +16,30 @@ from .relatorio import gerar_relatorio_html
 from .reserva_legal import calcular_rl
 from .consistencia import verificar_consistencia
 from .sobreposicao import LARGURA_DIVISA_PADRAO, PERC_DIVISA_PADRAO, analisar_sobreposicoes
-from .utils import adicionar_feicao, area_ha, criar_camada_memoria, src_utm_sirgas, uniao
+from .utils import (adicionar_feicao, area_ha, criar_camada_memoria, feicoes_no_src, recortar, src_utm_sirgas,
+                    subtrair, uniao)
+
+DISTANCIA_PROXIMAS_M = 3000.0   # restrições fora da ATI, mas próximas, citadas no plano de correções
+
+
+def _restricoes_proximas(camadas, perimetro, src):
+    """Restrições oficiais (camadas com 'tipo' e 'nome') que não tocam a ATI, a até 3 km dela."""
+    proximas = []
+    busca = perimetro.boundingBox().buffered(DISTANCIA_PROXIMAS_M)
+    for camada in camadas or []:
+        nomes = [n.lower() for n in camada.fields().names()]
+        if "tipo" not in nomes or "nome" not in nomes:
+            continue
+        for _fid, atributos, geom in feicoes_no_src(camada, src, busca):
+            if geom is None or geom.isEmpty() or geom.intersects(perimetro):
+                continue
+            distancia = geom.distance(perimetro)
+            if distancia <= DISTANCIA_PROXIMAS_M:
+                chaves = {k.lower(): k for k in atributos}
+                proximas.append({"tipo": str(atributos[chaves["tipo"]] or ""), "nome": str(atributos[chaves["nome"]] or ""),
+                                 "distancia_m": distancia})
+    proximas.sort(key=lambda r: r["distancia_m"])
+    return proximas
 from .validacao import validar_perimetro, verificar_extrapolacao
 
 
@@ -88,8 +111,18 @@ def executar(p):
     else:
         area_recompor_total = area_recompor
 
+    # APP a recompor de fato: escadinha na consolidada + APP fora da consolidada sem vegetação nativa
+    app_fora = res_app["app_nao_consolidada"] if tem_consolidada else res_app["app_integral"]
+    fora_sem_vegetacao = area_ha(subtrair(app_fora, vegetacao)) if app_fora is not None else 0.0
+    recompor_real = (area_recompor if tem_consolidada else 0.0) + fora_sem_vegetacao
+
     # --- 4. Reserva Legal ---
     res_rl = calcular_rl(area_imovel, p["pct_rl"], n_modulos, vegetacao, res_app["app_integral"])
+    if p.get("reservas"):
+        geoms_rl = [g.makeValid() for c in p["reservas"] for _f, _a, g in feicoes_no_src(c, src)]
+        res_rl["declarada_ha"] = area_ha(recortar(uniao(geoms_rl), perimetro)) if geoms_rl else 0.0
+    else:
+        res_rl["declarada_ha"] = None   # camadas de RL não informadas: não dá para dizer se falta declarar
 
     # --- 5. Camadas de resultado ---
     camadas = _criar_camadas(src, perimetro, area_imovel, n_modulos, problemas,
@@ -132,7 +165,12 @@ def executar(p):
             "tem_consolidada": tem_consolidada,
             "consolidada_ha": area_ha(consolidada),
             "limite_61b_ha": limite,
+            "fora_ha": area_ha(app_fora) if app_fora is not None else 0.0,
+            "fora_sem_vegetacao_ha": fora_sem_vegetacao,
+            "recompor_real_ha": recompor_real,
+            "tem_vegetacao": vegetacao is not None and not vegetacao.isEmpty(),
         },
+        "restricoes_proximas": _restricoes_proximas(p["restricoes"], perimetro, src),
         "rl": res_rl,
     }
 
