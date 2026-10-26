@@ -213,6 +213,7 @@ def criarEstruturaFixa(projeto):
             projeto.addMapLayer(camada, False)
             no = grupo.addLayer(camada)
             no.setCustomProperty('showFeatureCount', 1)
+            no.setExpanded(False)   # legenda por classe recolhida: no painel aparece só o nome da camada
     return True
 
 
@@ -486,6 +487,7 @@ def moverParaGrupo(projeto, idCamada, nomeGrupo):
     no = raiz.findLayer(idCamada)
     if no is not None:
         no.setCustomProperty('showFeatureCount', 1)
+        no.setExpanded(False)
 
 
 def rodapeAjuda():
