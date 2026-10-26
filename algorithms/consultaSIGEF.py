@@ -127,7 +127,7 @@ class ConsultaSigefCAR(QgsProcessingAlgorithm):
                 'vizinhos,titularidade').split(',')
 
     def icon(self):
-        return QIcon(os.path.join(os.path.dirname(os.path.dirname(__file__)), 'images/geocar.png'))
+        return QIcon(os.path.join(os.path.dirname(os.path.dirname(__file__)), 'images/geoincra.png'))
 
     def shortHelpString(self):
         txt = """Consulta as <b>parcelas certificadas no SIGEF</b> (INCRA) que tocam a ATI e as dos <b>imóveis vizinhos</b>, na margem informada (padrão de 1 km, a mesma da Consulta CAR automática): código do imóvel, nome, matrícula, situação e data de aprovação.
