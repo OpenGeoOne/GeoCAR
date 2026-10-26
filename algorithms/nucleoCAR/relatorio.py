@@ -124,10 +124,12 @@ def _plano_acao(r):
                 f"há só {h(rl['vegetacao_fora_app_ha'])} ha de vegetação nativa fora de APP")
         if declarada <= 0.0001:
             bloqueia.append(f"Reserva Legal não declarada: a exigida é de {h(rl['exigida_ha'])} ha "
-                            f"({_n(rl['percentual'], 0)}%); {base}.")
+                            f"({_n(rl['percentual'], 0)}%); {base}. A ferramenta 4e (Rascunho de Reserva Legal) "
+                            f"desenha uma proposta para ajustar.")
         else:
             bloqueia.append(f"Reserva Legal declarada ({h(declarada)} ha) menor que a exigida "
-                            f"({h(rl['exigida_ha'])} ha); {base}.")
+                            f"({h(rl['exigida_ha'])} ha); {base}. A ferramenta 4e (Rascunho de Reserva Legal) "
+                            f"desenha o que falta.")
     if rl["deficit_com_app_ha"] > 0.0001:
         if r["n_modulos"] <= 4:
             recompor.append(f"Déficit de RL de {h(rl['deficit_com_app_ha'])} ha, mas o imóvel tinha até 4 MF em "

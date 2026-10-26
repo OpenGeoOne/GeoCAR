@@ -100,6 +100,7 @@ CAMADAS_FIXAS = {
     'Restricoes_Territoriais': ('MultiPolygon', [('tipo', _S), ('nome', _S), ('codigo', _S), ('situacao', _S),
                                                  ('data', _S), ('fonte', _S), ('consulta', _S)]),
     'Area_Consolidada': ('MultiPolygon', [('observacao', _S)]),
+    'RL_Rascunho': ('MultiPolygon', [('origem', _S), ('area_ha', _D)]),
     'Problemas_Validacao': ('Point', [('feicao', _S), ('tipo', _S), ('descricao', _S)]),
     'Sobreposicoes': ('MultiPolygon', [('camada', _S), ('identific', _S), ('classe', _S), ('area_ha', _D),
                                           ('perc', _D), ('larg_med', _D)]),
@@ -113,7 +114,7 @@ CAMADAS_FIXAS = {
 }
 GRUPOS_FIXOS = [
     ('Areas_Vizinhas', ['CAR_Vizinhos_SICAR', 'Restricoes_Territoriais', 'Parcelas_SIGEF']),
-    ('Apoio à Pré-Análise', ['Area_Consolidada']),
+    ('Apoio à Pré-Análise', ['Area_Consolidada', 'RL_Rascunho']),
     (GRUPO_RESULTADOS_FIXO, ['Problemas_Validacao', 'Sobreposicoes', 'Inconsistencias', 'Divergencias_SIGEF']),
     # Subgrupo com as camadas da APP hídrica (ferramenta b)
     (GRUPO_RESULTADOS_FIXO + '/' + SUBGRUPO_APP, ['APP_Integral', 'Faixa_Escadinha', 'APP_Recompor_Consolidada',
@@ -125,6 +126,7 @@ ESTILOS_FIXOS = {
     'Restricoes_Territoriais': {'color': '255,0,255,40', 'outline_color': '200,0,200', 'outline_width': '0.6',
                                 'outline_style': 'dash'},
     'Area_Consolidada': {'color': '230,200,120,110', 'outline_color': '180,140,60', 'outline_width': '0.4'},
+    'RL_Rascunho': {'color': '0,170,60,90', 'outline_color': '0,110,40', 'outline_width': '0.8', 'outline_style': 'dash'},
     'APP_Integral': {'color': '0,160,255,90', 'outline_color': '0,100,200', 'outline_width': '0.4'},
     'Faixa_Escadinha': {'color': '0,90,200,120', 'outline_color': '0,60,160', 'outline_width': '0.4'},
     'APP_Recompor_Consolidada': {'color': '255,120,0,130', 'outline_color': '200,80,0', 'outline_width': '0.4'},
