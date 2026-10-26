@@ -180,7 +180,7 @@ class ReservaLegalRelatorioCAR(QgsProcessingAlgorithm):
             self.OUTPUT_HTML, self.tr('Relatório de pré-análise (PDF ou HTML)'),
             fileFilter='PDF (*.pdf);;HTML (*.html)',
             # Data no nome: cada dia de trabalho fica com o seu relatório
-            defaultValue=destinoPadrao(f"Pre-Analise_CAR_{datetime.now().strftime('%Y-%m-%d')}.pdf")))
+            defaultValue=destinoPadrao(f"GeoCAR_Resultados_Pre-Analise_{datetime.now().strftime('%Y-%m-%d')}.pdf")))
         self.addParameter(QgsProcessingParameterBoolean(
             self.GERAR_CAMADAS,
             self.tr('Gerar também as camadas de resultado (as mesmas das ferramentas a e b)'),

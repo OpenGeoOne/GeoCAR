@@ -193,8 +193,8 @@ def gerar_relatorio_html(r, caminho):
     """Gera o relatório a partir do resumo da análise: PDF se o caminho terminar em .pdf, senão HTML."""
     partes = [
         "<!doctype html><html lang='pt-BR'><head><meta charset='utf-8'>",
-        f"<title>Pré-análise do CAR</title><style>{CSS}</style></head><body>",
-        "<h1>Pré-análise do CAR</h1>",
+        f"<title>GeoCAR — Resultados da Pré-Análise</title><style>{CSS}</style></head><body>",
+        "<h1>GeoCAR — Resultados da Pré-Análise</h1>",
         f"<p>Gerado em {escape(r['data'])} — camada <b>{escape(r['camada_perimetro'])}</b></p>",
     ]
 
@@ -400,7 +400,7 @@ def _salvar_pdf(html, caminho):
         enum_compat(QPageLayout, "Orientation", "Portrait"),
         QMarginsF(15, 15, 15, 15),
         enum_compat(QPageLayout, "Unit", "Millimeter")))
-    impressora.setDocName("Pré-análise do CAR")
+    impressora.setDocName("GeoCAR — Resultados da Pré-Análise")
 
     # No PDF usa o CSS compacto, para as tabelas caberem inteiras na página
     html = html.replace(CSS, CSS_PDF, 1)
