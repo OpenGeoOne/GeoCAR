@@ -20,7 +20,8 @@ Cadastro Ambiental Rural (CAR)
  *                                                                         *
  ***************************************************************************/
 """
-# Ferramentas de correção (grupo 4): geometria da ATI, recorte pela ATI e lascas sem cobertura
+# Ferramentas de correção (grupo 4): geometria da ATI, recorte pela ATI, sobreposições entre camadas
+# e lascas sem cobertura
 # correcaoGeometria.py
 
 __author__ = 'Prof Cazaroli e Leandro França'
@@ -38,6 +39,7 @@ from qgis.core import (
     QgsProcessingException,
     QgsProcessingOutputNumber,
     QgsProcessingParameterBoolean,
+    QgsProcessingParameterEnum,
     QgsProcessingParameterMultipleLayers,
     QgsProcessingParameterNumber,
     QgsProcessingParameterVectorLayer,
@@ -45,14 +47,18 @@ from qgis.core import (
 )
 
 from .nucleoCAR.correcoes import (AREA_MINIMA_M2, Conversor, ajustarTipo, contarVertices, editar, finalizar,
-                                  srcDaAti, toleranciaNaCamada, uniaoAti)
+                                  prioridadeCobertura, prioridadeReserva, srcDaAti, toleranciaNaCamada, uniaoAti,
+                                  uniaoUtm)
 from .nucleoCAR.processingCAR import avisoLegal, camadaPadrao, camadasPadrao, rodapeAjuda
+from .nucleoCAR.validacao import (AGULHA, ANGULO_AGULHA_GRAUS, TOLERANCIA_PROXIMO_M, TOLERANCIA_VERTICE_M,
+                                  vertices_suspeitos)
 
 GRUPO = '4. 🔧 Correções'
 GRUPO_ID = 'correcoes'
 AVISO_EDICAO = ('<b>Segurança:</b> as correções ficam no <b>modo de edição</b> das camadas, sem salvar. Confira no mapa '
                 'e salve ou descarte as edições (Ctrl+Z desfaz). Marque <b>Salvar as alterações</b> para gravar direto. '
                 'Depois, rode a pré-análise de novo para confirmar que a pendência sumiu.')
+LIMITE_REPETICOES = 10000   # trava de segurança na remoção vértice a vértice
 
 
 class _BaseCorrecao(QgsProcessingAlgorithm):
@@ -64,6 +70,20 @@ class _BaseCorrecao(QgsProcessingAlgorithm):
         self.addParameter(QgsProcessingParameterBoolean(
             self.SALVAR, self.tr('Salvar as alterações (desmarcado: ficam em edição para conferir)'),
             defaultValue=False))
+
+    def camadaAti(self, parameters, context, chave='INPUT_ATI'):
+        camada = self.parameterAsVectorLayer(parameters, chave, context)
+        if camada is None or camada.featureCount() == 0:
+            raise QgsProcessingException(self.tr('A camada ATI está vazia ou não foi informada.'))
+        return camada
+
+    def listaDeCamadas(self, parameters, chave, context, excluir=None):
+        return [c for c in self.parameterAsLayerList(parameters, chave, context)
+                if isinstance(c, QgsVectorLayer) and (excluir is None or c.id() != excluir.id())]
+
+    def avisarEdicao(self, camada, alterou, salvar, feedback):
+        if alterou and not salvar:
+            feedback.pushWarning(self.tr(f'{camada.name()} está em edição: confira e salve (ou descarte) as alterações.'))
 
     def flags(self):
         # Edita camadas do projeto: precisa da thread principal
@@ -83,10 +103,12 @@ class _BaseCorrecao(QgsProcessingAlgorithm):
 
 
 class CorrigirGeometriaAtiCAR(_BaseCorrecao):
-    """Remove vértices duplicados e corrige geometrias inválidas da ATI."""
+    """Vértices duplicados, vértices muito próximos, agulhas, geometria inválida e partes sobrepostas da ATI."""
 
     INPUT_ATI = 'INPUT_ATI'
     TOLERANCIA = 'TOLERANCIA'
+    PROXIMOS = 'PROXIMOS'
+    ANGULO = 'ANGULO'
     OUTPUT_N = 'OUTPUT_N'
 
     def initAlgorithm(self, config=None):
@@ -95,46 +117,91 @@ class CorrigirGeometriaAtiCAR(_BaseCorrecao):
             defaultValue=camadaPadrao('ati') or 'ATI'))
         self.addParameter(QgsProcessingParameterNumber(
             self.TOLERANCIA, self.tr('Tolerância para vértices duplicados (m)'),
-            type=Qgis.ProcessingNumberParameterType.Double, minValue=0.0, maxValue=1.0, defaultValue=0.001))
+            type=Qgis.ProcessingNumberParameterType.Double, minValue=0.0, maxValue=1.0,
+            defaultValue=TOLERANCIA_VERTICE_M))
+        self.addParameter(QgsProcessingParameterNumber(
+            self.PROXIMOS, self.tr('Distância mínima entre vértices seguidos (m)'),
+            type=Qgis.ProcessingNumberParameterType.Double, minValue=0.0, maxValue=1.0,
+            defaultValue=TOLERANCIA_PROXIMO_M))
+        self.addParameter(QgsProcessingParameterNumber(
+            self.ANGULO, self.tr('Ângulo máximo de uma agulha (graus)'),
+            type=Qgis.ProcessingNumberParameterType.Double, minValue=0.0, maxValue=10.0,
+            defaultValue=ANGULO_AGULHA_GRAUS))
         self.parametroSalvar()
         self.addOutput(QgsProcessingOutputNumber(self.OUTPUT_N, self.tr('Feições corrigidas')))
 
     def processAlgorithm(self, parameters, context, feedback):
-        camada = self.parameterAsVectorLayer(parameters, self.INPUT_ATI, context)
-        if camada is None or camada.featureCount() == 0:
-            raise QgsProcessingException(self.tr('A camada ATI está vazia ou não foi informada.'))
+        camada = self.camadaAti(parameters, context)
         tolerancia = toleranciaNaCamada(camada, self.parameterAsDouble(parameters, self.TOLERANCIA, context))
+        proximos = self.parameterAsDouble(parameters, self.PROXIMOS, context)
+        angulo = self.parameterAsDouble(parameters, self.ANGULO, context)
+        src = srcDaAti(camada)
+        conversor = Conversor(camada, src)
+        salvar = self.parameterAsBool(parameters, self.SALVAR, context)
         ligou = editar(camada)
-        corrigidas = 0
+        corrigidas = set()
+
+        # 1. Vértices e validade, feição por feição
         for feicao in camada.getFeatures():
             if not feicao.hasGeometry():
                 continue
             geometria = QgsGeometry(feicao.geometry())
             antes = contarVertices(geometria)
             geometria.removeDuplicateNodes(tolerancia)
-            removidos = antes - contarVertices(geometria)
+            duplicados = antes - contarVertices(geometria)
+            agulhas = proximosRemovidos = 0
+            for _ in range(LIMITE_REPETICOES):
+                suspeitos = vertices_suspeitos(conversor.paraUtm(geometria), proximos, angulo)
+                if not suspeitos or not geometria.deleteVertex(suspeitos[0][0]):
+                    break
+                if suspeitos[0][1] == AGULHA:
+                    agulhas += 1
+                else:
+                    proximosRemovidos += 1
             invalida = not geometria.isGeosValid()
             if invalida:
                 motivos = '; '.join(e.what() for e in geometria.validateGeometry())
                 geometria = geometria.makeValid()
-            if not removidos and not invalida:
+            if not (duplicados or agulhas or proximosRemovidos or invalida):
                 continue
             geometria = ajustarTipo(geometria, camada)
             if geometria.isEmpty() or not camada.changeGeometry(feicao.id(), geometria):
                 feedback.reportError(self.tr(f'Feição {feicao.id()}: não foi possível corrigir.'), fatalError=False)
                 continue
-            corrigidas += 1
-            if removidos:
-                feedback.pushInfo(self.tr(f'Feição {feicao.id()}: {removidos} vértice(s) duplicado(s) removido(s).'))
+            corrigidas.add(feicao.id())
+            for n, texto in ((duplicados, 'vértice(s) duplicado(s) removido(s)'),
+                             (proximosRemovidos, f'vértice(s) a menos de {proximos * 100:g} cm do vizinho removido(s)'),
+                             (agulhas, 'agulha(s) removida(s)')):
+                if n:
+                    feedback.pushInfo(self.tr(f'Feição {feicao.id()}: {n} {texto}.'))
             if invalida:
                 feedback.pushInfo(self.tr(f'Feição {feicao.id()}: geometria inválida corrigida ({motivos}).'))
-        salvar = self.parameterAsBool(parameters, self.SALVAR, context)
-        finalizar(camada, ligou, corrigidas > 0, salvar)
-        if corrigidas and not salvar:
-            feedback.pushWarning(self.tr(f'{camada.name()} está em edição: confira e salve (ou descarte) as alterações.'))
+
+        # 2. Partes da ATI sobrepostas: dissolve na feição de menor id
+        mantidas = []   # [fid, geometria na camada, geometria no UTM]
+        for feicao in sorted(camada.getFeatures(), key=lambda f: f.id()):
+            if not feicao.hasGeometry():
+                continue
+            geometria = QgsGeometry(feicao.geometry())
+            utm = conversor.paraUtm(geometria).makeValid()
+            destino = next((m for m in mantidas if m[2].intersection(utm).area() >= AREA_MINIMA_M2), None)
+            if destino is None:
+                mantidas.append([feicao.id(), geometria, utm])
+                continue
+            area = destino[2].intersection(utm).area()
+            destino[1] = destino[1].combine(geometria).makeValid()
+            destino[2] = destino[2].combine(utm)
+            camada.changeGeometry(destino[0], ajustarTipo(destino[1], camada))
+            camada.deleteFeature(feicao.id())
+            corrigidas.update((destino[0], feicao.id()))
+            feedback.pushInfo(self.tr(f'Feições {destino[0]} e {feicao.id()} se sobrepunham ({area:.1f} m²): '
+                                      f'unidas na feição {destino[0]}.'))
+
+        finalizar(camada, ligou, bool(corrigidas), salvar)
+        self.avisarEdicao(camada, bool(corrigidas), salvar, feedback)
         if not corrigidas:
             feedback.pushInfo(self.tr('Nenhuma correção necessária.'))
-        return {self.OUTPUT_N: corrigidas}
+        return {self.OUTPUT_N: len(corrigidas)}
 
     def name(self):
         return 'corrigirgeometriaaticar'
@@ -147,10 +214,13 @@ class CorrigirGeometriaAtiCAR(_BaseCorrecao):
 
     def shortHelpString(self):
         txt = f"""Corrige os problemas geométricos da ATI apontados em <b>Problemas_Validacao</b>:
-• remove <b>vértices duplicados</b> em sequência (dentro da tolerância, padrão de 1 mm), mantendo um deles
-• corrige <b>geometrias inválidas</b> (autointerseção, anel cruzado), mantendo só as partes poligonais
+• <b>vértices duplicados</b> em sequência (até 1 mm): mantém um deles
+• <b>vértices muito próximos</b> (menos de 5 cm um do outro): apaga o segundo
+• <b>agulhas</b>: pontas finas, com ângulo menor que 1°, em que o limite vai e volta; apaga o vértice da ponta
+• <b>geometria inválida</b> (autointerseção, anel cruzado), mantendo só as partes poligonais
+• <b>partes da ATI sobrepostas</b>: une as feições numa só
 
-Não muda o desenho da ATI além do necessário: um vértice duplicado sai sem mover os demais.
+Não muda o desenho da ATI além do necessário: apagar um vértice não move os demais.
 
 {AVISO_EDICAO}
 """ + avisoLegal()
@@ -178,11 +248,8 @@ class RecortarPelaAtiCAR(_BaseCorrecao):
         self.addOutput(QgsProcessingOutputNumber(self.OUTPUT_HA, self.tr('Área removida fora da ATI (ha)')))
 
     def processAlgorithm(self, parameters, context, feedback):
-        camadaAti = self.parameterAsVectorLayer(parameters, self.INPUT_ATI, context)
-        if camadaAti is None or camadaAti.featureCount() == 0:
-            raise QgsProcessingException(self.tr('A camada ATI está vazia ou não foi informada.'))
-        camadas = [c for c in self.parameterAsLayerList(parameters, self.INPUT_CAMADAS, context)
-                   if isinstance(c, QgsVectorLayer) and c.id() != camadaAti.id()]
+        camadaAti = self.camadaAti(parameters, context)
+        camadas = self.listaDeCamadas(parameters, self.INPUT_CAMADAS, context, camadaAti)
         src = srcDaAti(camadaAti)
         ati = uniaoAti(camadaAti, src)
         salvar = self.parameterAsBool(parameters, self.SALVAR, context)
@@ -210,8 +277,7 @@ class RecortarPelaAtiCAR(_BaseCorrecao):
                                               f'fora da ATI recortados.'))
                 alterou = True
             finalizar(camada, ligou, alterou, salvar)
-            if alterou and not salvar:
-                feedback.pushWarning(self.tr(f'{camada.name()} está em edição: confira e salve (ou descarte).'))
+            self.avisarEdicao(camada, alterou, salvar, feedback)
         if totalHa == 0:
             feedback.pushInfo(self.tr('Nenhuma feição passa da ATI.'))
         return {self.OUTPUT_HA: round(totalHa, 4)}
@@ -229,6 +295,131 @@ class RecortarPelaAtiCAR(_BaseCorrecao):
         txt = f"""Recorta no limite da ATI as camadas declaradas (vegetação nativa, área consolidada, pousio, Reserva Legal, servidão...), corrigindo a inconsistência <b>Fora da ATI</b>.
 
 A parte de fora é removida; a feição que estiver inteira fora da ATI é excluída. A lista de camadas já vem preenchida com as camadas da RAIZ — confira, pois os nomes variam entre os estados.
+
+{AVISO_EDICAO}
+""" + avisoLegal()
+        return txt + rodapeAjuda()
+
+
+class ResolverSobreposicoesCAR(_BaseCorrecao):
+    """Tira as sobreposições entre coberturas do solo, entre Reservas Legais e da servidão sobre a RL."""
+
+    INPUT_ATI = 'INPUT_ATI'
+    INPUT_COBERTURAS = 'INPUT_COBERTURAS'
+    PRIORIDADE = 'PRIORIDADE'
+    INPUT_RESERVAS = 'INPUT_RESERVAS'
+    INPUT_SERVIDOES = 'INPUT_SERVIDOES'
+    OUTPUT_HA = 'OUTPUT_HA'
+
+    PRIORIDADES = ['Vegetação nativa > área consolidada > pousio',
+                   'Área consolidada > vegetação nativa > pousio']
+
+    def initAlgorithm(self, config=None):
+        poligono = Qgis.ProcessingSourceType.VectorPolygon
+        self.addParameter(QgsProcessingParameterVectorLayer(
+            self.INPUT_ATI, self.tr('Área Total do Imóvel (ATI)'), [poligono], defaultValue=camadaPadrao('ati') or 'ATI'))
+        padrao = []
+        for chave in ('vegetacao', 'coberturas'):
+            padrao += [n for n in camadasPadrao(chave) if n not in padrao]
+        self.addParameter(QgsProcessingParameterMultipleLayers(
+            self.INPUT_COBERTURAS, self.tr('Camadas de cobertura do solo'),
+            layerType=poligono, optional=True, defaultValue=padrao or None))
+        self.addParameter(QgsProcessingParameterEnum(
+            self.PRIORIDADE, self.tr('Na sobreposição entre coberturas, prevalece'),
+            options=[self.tr(p) for p in self.PRIORIDADES], defaultValue=0))
+        self.addParameter(QgsProcessingParameterMultipleLayers(
+            self.INPUT_RESERVAS, self.tr('Reserva Legal (proposta, averbada, aprovada...)'),
+            layerType=poligono, optional=True, defaultValue=camadasPadrao('reservas') or None))
+        self.addParameter(QgsProcessingParameterMultipleLayers(
+            self.INPUT_SERVIDOES, self.tr('Servidão administrativa (sai de dentro da Reserva Legal)'),
+            layerType=poligono, optional=True, defaultValue=camadasPadrao('servidoes') or None))
+        self.parametroSalvar()
+        self.addOutput(QgsProcessingOutputNumber(self.OUTPUT_HA, self.tr('Área sobreposta removida (ha)')))
+
+    def _subtrairEmOrdem(self, camadas, src, ocupado, motivo, salvar, feedback):
+        """
+        Em cada camada (na ordem de prioridade), tira das feições o que já está ocupado pelas anteriores
+        (e pela geometria inicial). Retorna a área removida, em m².
+        """
+        removido = 0.0
+        for camada in camadas:
+            conversor = Conversor(camada, src)
+            originais, mudancas = [], []
+            for feicao in camada.getFeatures():
+                if not feicao.hasGeometry():
+                    continue
+                geometria = conversor.paraUtm(feicao.geometry()).makeValid()
+                originais.append(geometria)
+                if ocupado.isEmpty() or not geometria.boundingBox().intersects(ocupado.boundingBox()):
+                    continue
+                comum = geometria.intersection(ocupado)
+                if comum.isEmpty() or comum.area() < AREA_MINIMA_M2:
+                    continue
+                mudancas.append((feicao.id(), geometria.difference(ocupado), comum.area()))
+            if mudancas:
+                ligou = editar(camada)
+                for fid, resto, area in mudancas:
+                    removido += area
+                    if resto.isEmpty() or resto.area() < AREA_MINIMA_M2:
+                        camada.deleteFeature(fid)
+                        feedback.pushInfo(self.tr(f'{camada.name()}, feição {fid}: inteira sobre {motivo} — excluída.'))
+                    else:
+                        camada.changeGeometry(fid, ajustarTipo(conversor.paraCamada(resto), camada))
+                        feedback.pushInfo(self.tr(f'{camada.name()}, feição {fid}: {area:.1f} m² sobre {motivo} '
+                                                  f'removidos.'))
+                finalizar(camada, ligou, True, salvar)
+                self.avisarEdicao(camada, True, salvar, feedback)
+            if originais:
+                ocupado = QgsGeometry.unaryUnion([ocupado] + originais) if not ocupado.isEmpty() \
+                    else QgsGeometry.unaryUnion(originais)
+        return removido
+
+    def processAlgorithm(self, parameters, context, feedback):
+        camadaAti = self.camadaAti(parameters, context)
+        coberturas = self.listaDeCamadas(parameters, self.INPUT_COBERTURAS, context, camadaAti)
+        reservas = self.listaDeCamadas(parameters, self.INPUT_RESERVAS, context, camadaAti)
+        servidoes = self.listaDeCamadas(parameters, self.INPUT_SERVIDOES, context, camadaAti)
+        if not coberturas and not reservas:
+            raise QgsProcessingException(self.tr('Informe as camadas de cobertura do solo ou de Reserva Legal.'))
+        consolidadaPrimeiro = self.parameterAsEnum(parameters, self.PRIORIDADE, context) == 1
+        salvar = self.parameterAsBool(parameters, self.SALVAR, context)
+        src = srcDaAti(camadaAti)
+
+        # Ordem estável: em empate, vale a ordem da lista
+        coberturas = sorted(coberturas, key=lambda c: prioridadeCobertura(c.name(), consolidadaPrimeiro))
+        reservas = sorted(reservas, key=lambda c: prioridadeReserva(c.name()))
+        if coberturas:
+            feedback.pushInfo(self.tr('Coberturas, da que prevalece para a que cede: '
+                                      + ' > '.join(c.name() for c in coberturas)))
+        if reservas:
+            feedback.pushInfo(self.tr('Reservas Legais, da que prevalece para a que cede: '
+                                      + ' > '.join(c.name() for c in reservas)))
+
+        removido = self._subtrairEmOrdem(coberturas, src, QgsGeometry(), 'cobertura de maior prioridade',
+                                         salvar, feedback)
+        removido += self._subtrairEmOrdem(reservas, src, uniaoUtm(servidoes, src),
+                                          'servidão administrativa ou Reserva Legal de maior prioridade',
+                                          salvar, feedback)
+        if not removido:
+            feedback.pushInfo(self.tr('Nenhuma sobreposição entre as camadas.'))
+        return {self.OUTPUT_HA: round(removido / 10000.0, 4)}
+
+    def name(self):
+        return 'resolversobreposicoescar'
+
+    def displayName(self):
+        return self.tr('c. Resolver sobreposições entre camadas')
+
+    def createInstance(self):
+        return ResolverSobreposicoesCAR()
+
+    def shortHelpString(self):
+        txt = f"""Tira as sobreposições entre as camadas declaradas apontadas em <b>Inconsistencias</b>, que o SICAR não aceita:
+• <b>entre coberturas do solo</b>: a mesma área como vegetação nativa e área consolidada, por exemplo. Prevalece a vegetação nativa (situação atual), depois a área consolidada e o pousio; a ordem pode ser invertida no parâmetro
+• <b>servidão administrativa sobre Reserva Legal</b>: a RL não pode ficar sobre a servidão, então a servidão é recortada da RL
+• <b>entre Reservas Legais</b>: prevalece a averbada, depois a aprovada; a proposta cede
+
+A camada que prevalece não muda; a outra perde só a parte sobreposta.
 
 {AVISO_EDICAO}
 """ + avisoLegal()
@@ -264,20 +455,16 @@ class PreencherLascasCAR(_BaseCorrecao):
         self.addOutput(QgsProcessingOutputNumber(self.OUTPUT_HA, self.tr('Área preenchida (ha)')))
 
     def processAlgorithm(self, parameters, context, feedback):
-        camadaAti = self.parameterAsVectorLayer(parameters, self.INPUT_ATI, context)
-        if camadaAti is None or camadaAti.featureCount() == 0:
-            raise QgsProcessingException(self.tr('A camada ATI está vazia ou não foi informada.'))
-        coberturas = [c for c in self.parameterAsLayerList(parameters, self.INPUT_COBERTURAS, context)
-                      if isinstance(c, QgsVectorLayer) and c.id() != camadaAti.id()]
-        servidoes = [c for c in self.parameterAsLayerList(parameters, self.INPUT_SERVIDOES, context)
-                     if isinstance(c, QgsVectorLayer)]
+        camadaAti = self.camadaAti(parameters, context)
+        coberturas = self.listaDeCamadas(parameters, self.INPUT_COBERTURAS, context, camadaAti)
+        servidoes = self.listaDeCamadas(parameters, self.INPUT_SERVIDOES, context)
         if not coberturas:
             raise QgsProcessingException(self.tr('Informe ao menos uma camada de cobertura do solo.'))
         areaMaxima = self.parameterAsDouble(parameters, self.AREA_MAXIMA, context)
         src = srcDaAti(camadaAti)
         ati = uniaoAti(camadaAti, src)
 
-        # Feições de cobertura no UTM: (camada, id, geometria)
+        # Feições de cobertura no UTM: [camada, id, geometria]
         feicoes, ocupado = [], []
         for camada in coberturas:
             conversor = Conversor(camada, src)
@@ -286,9 +473,9 @@ class PreencherLascasCAR(_BaseCorrecao):
                     g = conversor.paraUtm(f.geometry()).makeValid()
                     feicoes.append([camada, f.id(), g])
                     ocupado.append(g)
-        for camada in servidoes:
-            conversor = Conversor(camada, src)
-            ocupado += [conversor.paraUtm(f.geometry()).makeValid() for f in camada.getFeatures() if f.hasGeometry()]
+        servidao = uniaoUtm(servidoes, src)
+        if not servidao.isEmpty():
+            ocupado.append(servidao)
         semCobertura = ati.difference(QgsGeometry.unaryUnion(ocupado)) if ocupado else QgsGeometry(ati)
         lascas = [p for p in semCobertura.asGeometryCollection()
                   if not p.isEmpty() and p.area() >= AREA_MINIMA_M2] if not semCobertura.isEmpty() else []
@@ -298,14 +485,14 @@ class PreencherLascasCAR(_BaseCorrecao):
             if lasca.area() > areaMaxima:
                 grandes.append(lasca.area())
                 continue
-            # Vizinha com a maior divisa em comum
+            # Vizinha com a maior divisa em comum (área de contato com uma borda de 5 cm em volta da lasca)
             borda = lasca.buffer(0.05, 4)
             melhor, maior = None, 0.0
             for item in feicoes:
                 comum = item[2].intersection(borda)
-                comprimento = comum.area() if not comum.isEmpty() else 0.0
-                if comprimento > maior:
-                    melhor, maior = item, comprimento
+                contato = comum.area() if not comum.isEmpty() else 0.0
+                if contato > maior:
+                    melhor, maior = item, contato
             if melhor is None:
                 grandes.append(lasca.area())
                 continue
@@ -324,8 +511,7 @@ class PreencherLascasCAR(_BaseCorrecao):
             for fid, geometria in lista:
                 camada.changeGeometry(fid, ajustarTipo(conversor.paraCamada(geometria), camada))
             finalizar(camada, ligou, True, salvar)
-            if not salvar:
-                feedback.pushWarning(self.tr(f'{camada.name()} está em edição: confira e salve (ou descarte).'))
+            self.avisarEdicao(camada, True, salvar, feedback)
         if grandes:
             feedback.pushWarning(self.tr(
                 f'{len(grandes)} área(s) sem cobertura maiores que {areaMaxima:g} m² ({sum(grandes) / 10000.0:.4f} ha) '
@@ -338,7 +524,7 @@ class PreencherLascasCAR(_BaseCorrecao):
         return 'preencherlascascar'
 
     def displayName(self):
-        return self.tr('c. Preencher lascas sem cobertura')
+        return self.tr('d. Preencher lascas sem cobertura')
 
     def createInstance(self):
         return PreencherLascasCAR()
@@ -347,6 +533,8 @@ class PreencherLascasCAR(_BaseCorrecao):
         txt = f"""Junta à cobertura vizinha as <b>lascas</b> da ATI sem nenhuma cobertura do solo declarada — o aviso <b>Área sem cobertura do solo declarada</b> da pré-análise.
 
 Cada lasca até a área máxima (padrão de 500 m²) vai para a feição de cobertura com a maior divisa em comum com ela. Áreas maiores não são preenchidas: são uso de verdade e precisam ser classificadas manualmente. A servidão administrativa conta como área ocupada.
+
+Rode depois da <b>c. Resolver sobreposições entre camadas</b>, para as lascas serem medidas já sem sobreposição.
 
 {AVISO_EDICAO}
 """ + avisoLegal()

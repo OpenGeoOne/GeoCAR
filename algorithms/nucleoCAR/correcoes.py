@@ -93,3 +93,37 @@ def toleranciaNaCamada(camada, metros):
 
 def contarVertices(geometria):
     return sum(1 for _ in geometria.vertices())
+
+
+def prioridadeCobertura(nome, consolidadaPrimeiro=False):
+    """Ordem de prevalência na sobreposição entre coberturas do solo (menor = prevalece)."""
+    n = nome.lower()
+    vegetacao, consolidada = (1, 0) if consolidadaPrimeiro else (0, 1)
+    if 'vegeta' in n or n == 'avn':
+        return vegetacao
+    if 'consolid' in n or n == 'ac':
+        return consolidada
+    if 'pousio' in n:
+        return 2
+    return 3
+
+
+def prioridadeReserva(nome):
+    """Ordem de prevalência entre Reservas Legais: averbada > aprovada > demais > proposta."""
+    n = nome.lower()
+    if 'proposta' in n or 'restauracao' in n:
+        return 3
+    if 'averbada' in n and 'nao' not in n:
+        return 0
+    if 'aprovada' in n:
+        return 1
+    return 2
+
+
+def uniaoUtm(camadas, src):
+    """União das feições das camadas no UTM do imóvel (geometria vazia se não houver)."""
+    geometrias = []
+    for camada in camadas:
+        conversor = Conversor(camada, src)
+        geometrias += [conversor.paraUtm(f.geometry()).makeValid() for f in camada.getFeatures() if f.hasGeometry()]
+    return QgsGeometry.unaryUnion(geometrias) if geometrias else QgsGeometry()

@@ -73,7 +73,8 @@ def _plano_acao(r):
         tipos = sorted({x["tipo"] for x in r["problemas"]})
         bloqueia.append(f"Corrigir {len(r['problemas'])} problema(s) geométrico(s): {', '.join(tipos)} "
                         f"(camada Problemas_Validacao)."
-                        + (" Use a ferramenta 4a (Corrigir geometria da ATI)." if {"Vértices duplicados", "Geometria inválida"} & set(tipos) else ""))
+                        + (" Use a ferramenta 4a (Corrigir geometria da ATI)." if {"Vértices duplicados", "Geometria inválida", "Vértices muito próximos", "Agulha",
+                                   "Sobreposição entre parcelas"} & set(tipos) else ""))
 
     # Sobreposições
     relevantes = [s for s in r["sobreposicoes"] if s["classe"] == "Sobreposição relevante"]
@@ -100,13 +101,15 @@ def _plano_acao(r):
     for i in r.get("consistencia") or []:
         texto = f"{i['tipo']} ({i['camadas']}): {h(i['area_ha'])} ha."
         if i["gravidade"] == "Erro":
-            dica = (" Use a ferramenta 4b (Recortar camadas pela ATI)." if i["tipo"].startswith("Fora da ATI") else "")
+            dica = (" Use a ferramenta 4b (Recortar camadas pela ATI)." if i["tipo"].startswith("Fora da ATI") else
+                    " Use a ferramenta 4c (Resolver sobreposições entre camadas)."
+                    if i["tipo"].startswith(("Sobreposição entre", "Servidão administrativa sobre")) else "")
             bloqueia.append(texto + " Corrigir as camadas declaradas." + dica)
         elif i["tipo"].startswith("Reserva Legal sem vegetação"):
             recompor.append(f"Reserva Legal sem vegetação nativa: {h(i['area_ha'])} ha a recompor (PRA).")
         elif i["tipo"].startswith("Área sem cobertura"):
             ajustes.append(f"{h(i['area_ha'])} ha da ATI sem cobertura do solo declarada: classificar essas áreas em "
-                           f"vegetação nativa, área consolidada ou pousio. Use a ferramenta 4c (Preencher lascas sem "
+                           f"vegetação nativa, área consolidada ou pousio. Use a ferramenta 4d (Preencher lascas sem "
                            f"cobertura) para juntar as lascas pequenas (até 500 m²) à cobertura vizinha.")
         else:
             ajustes.append(texto)

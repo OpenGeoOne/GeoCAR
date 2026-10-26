@@ -5,10 +5,13 @@ Validação topológica do perímetro do imóvel e das camadas internas.
 Verifica:
 - geometrias nulas, vazias ou inválidas (GEOS)
 - vértices duplicados consecutivos
+- vértices muito próximos (menos de 5 cm) e agulhas (pontas finas em que o limite vai e volta)
 - imóvel multiparte (várias parcelas)
 - sobreposição entre parcelas do próprio imóvel
 - camadas internas (vegetação, área consolidada) extrapolando o perímetro
 """
+
+import math
 
 from qgis.core import QgsPointXY
 
@@ -16,6 +19,10 @@ from .utils import area_ha, feicoes_no_src, recortar, subtrair, uniao
 
 TOLERANCIA_VERTICE_M = 0.001   # 1 mm
 AREA_MINIMA_SOBREPOSICAO_HA = 0.0001  # 1 m², abaixo disso é ruído numérico
+TOLERANCIA_PROXIMO_M = 0.05    # vértices a menos de 5 cm um do outro: ruído de digitalização
+ANGULO_AGULHA_GRAUS = 1.0      # ângulo interno abaixo disso: ponta fina (agulha)
+VERTICE_MUITO_PROXIMO = "Vértices muito próximos"
+AGULHA = "Agulha"
 
 
 def vertices_duplicados(geometria, tolerancia=TOLERANCIA_VERTICE_M):
@@ -38,6 +45,47 @@ def grupos_duplicados(pontos, tolerancia=TOLERANCIA_VERTICE_M):
         else:
             grupos.append([ponto, 1])
     return [(p, n) for p, n in grupos]
+
+
+def _angulo(a, p, b):
+    """Ângulo em p (graus, 0 a 180) entre os segmentos p-a e p-b."""
+    ux, uy, wx, wy = a.x() - p.x(), a.y() - p.y(), b.x() - p.x(), b.y() - p.y()
+    return math.degrees(math.atan2(abs(ux * wy - uy * wx), ux * wx + uy * wy))
+
+
+def vertices_suspeitos(geometria, tolerancia_proximo=TOLERANCIA_PROXIMO_M, angulo_agulha=ANGULO_AGULHA_GRAUS):
+    """
+    Vértices a apagar, com a geometria num SRC métrico: lista de (número do vértice, tipo, ponto, valor).
+    - Vértices muito próximos: o segundo de dois vértices seguidos a menos da tolerância (valor = distância em m).
+      Os duplicados (menos de 1 mm) ficam de fora, pois têm checagem própria.
+    - Agulha: vértice com ângulo interno menor que o limite (valor = ângulo em graus).
+    Anéis com menos de 4 vértices não são avaliados (apagar um vértice desfaria o polígono).
+    """
+    aneis = {}
+    for n, vertice in enumerate(geometria.vertices()):
+        _ok, vid = geometria.vertexIdFromVertexNr(n)
+        aneis.setdefault((vid.part, vid.ring), []).append((n, vertice))
+    saida = []
+    for lista in aneis.values():
+        if len(lista) > 1 and lista[0][1].distance(lista[-1][1]) < 1e-9:
+            lista = lista[:-1]   # o último repete o primeiro (anel fechado)
+        m = len(lista)
+        if m < 4:
+            continue
+        for k in range(m):
+            n, p = lista[k]
+            nProximo, b = lista[(k + 1) % m]
+            _nAnterior, a = lista[k - 1]
+            distancia = p.distance(b)
+            if TOLERANCIA_VERTICE_M <= distancia < tolerancia_proximo:
+                saida.append((nProximo if (k + 1) % m else n, VERTICE_MUITO_PROXIMO,
+                              QgsPointXY(p.x(), p.y()), distancia))
+            if p.distance(a) < tolerancia_proximo or distancia < tolerancia_proximo:
+                continue
+            angulo = _angulo(a, p, b)
+            if angulo < angulo_agulha:
+                saida.append((n, AGULHA, QgsPointXY(p.x(), p.y()), angulo))
+    return saida
 
 
 def contar_vertices_duplicados(geometria, tolerancia=TOLERANCIA_VERTICE_M):
@@ -85,6 +133,13 @@ def validar_perimetro(camada, src_trabalho):
                               f"{'um deles' if copias == 1 else f'{copias} deles'}."),
                 "ponto": ponto,
             })
+
+        # Vértices muito próximos e agulhas
+        for _n, tipo, ponto, valor in vertices_suspeitos(geom):
+            descricao = (f"Ponta fina de {valor:.2f}° (o limite vai e volta): apague o vértice da ponta."
+                         if tipo == AGULHA else
+                         f"2 vértices a {valor * 100:.1f} cm um do outro: apague um deles.")
+            problemas.append({"feicao": fid, "tipo": tipo, "descricao": descricao, "ponto": ponto})
 
         # Multiparte
         if geom.isMultipart():
