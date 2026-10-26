@@ -19,9 +19,20 @@ from .processingCAR import camadaFixa, garantirCamadaFixa, substituirFeicoes
 ARQUIVO_FONTES = os.path.join(os.path.dirname(__file__), 'fontes_restricoes.json')
 NOME_VIZINHOS = 'CAR_Vizinhos_SICAR'
 NOME_SIGEF = 'Parcelas_SIGEF'
+NOME_RESTRICOES = 'Restricoes_Territoriais'
+MARGEM_RESTRICOES_M = 2000.0
 PROPRIEDADE_CONSULTA = 'geocar/consulta'   # data da última consulta, guardada na camada (salva no projeto)
 MARGEM_VIZINHOS_M = 1000.0
 MARGEM_SIGEF_M = 500.0
+
+
+def _camadaDoResultado(contexto, saida):
+    """Camada de saída de um algoritmo filho (o processing.run pode devolver o id ou a própria camada)."""
+    if not saida:
+        return None
+    identificador = saida.id() if hasattr(saida, 'id') else saida
+    camada = contexto.takeResultLayer(identificador)
+    return camada if camada is not None else (saida if hasattr(saida, 'id') else None)
 
 
 def marcarConsulta(camada):
@@ -149,7 +160,7 @@ def garantirVizinhosCAR(context, feedback, camadaAti):
     if fixa is not None:
         marcarConsulta(fixa)
         return fixa
-    camada = filho.takeResultLayer(resultado.get('OUTPUT')) if resultado.get('OUTPUT') else None
+    camada = _camadaDoResultado(filho, resultado.get('OUTPUT'))
     if camada is not None:
         camada.setName(NOME_VIZINHOS)
     return camada
@@ -177,3 +188,47 @@ def completarSigef(context, feedback, camadaAti, camada):
     if camada is not None and camada.name() == NOME_SIGEF and not jaConsultada(camada):
         return garantirParcelasSigef(context, feedback, camadaAti)
     return camada
+
+
+def garantirRestricoes(context, feedback, camadaAti):
+    """
+    Restrições oficiais (UC, TI, assentamentos, embargos, terras públicas). Ainda não consultadas no projeto:
+    faz a consulta de restrições (1d) pela ATI e grava na camada fixa Restricoes_Territoriais.
+    """
+    import processing
+
+    projeto = context.project() or QgsProject.instance()
+    fixa = garantirCamadaFixa(NOME_RESTRICOES, projeto)
+    if jaConsultada(fixa):
+        return fixa
+    feedback.pushInfo('Restrições oficiais ainda não consultadas: fazendo a consulta de restrições pela ATI '
+                      '(pode levar cerca de 1 minuto)...')
+    filho = QgsProcessingContext()
+    filho.setProject(projeto)
+    try:
+        resultado = processing.run('GeoCAR:consultarestricoescar', {
+            'INPUT_ATI': camadaAti, 'MARGEM': MARGEM_RESTRICOES_M, 'OUTPUT': 'TEMPORARY_OUTPUT'},
+            context=filho, feedback=feedback)
+    except Exception as erro:
+        feedback.reportError(f'Consulta de restrições não concluída: {erro}', fatalError=False)
+        return fixa
+    camada = _camadaDoResultado(filho, resultado.get('OUTPUT'))
+    if camada is None:
+        return fixa
+    if fixa is None:
+        camada.setName(NOME_RESTRICOES)
+        return camada
+    substituirFeicoes(fixa, camada)
+    marcarConsulta(fixa)
+    return fixa
+
+
+def completarRestricoes(context, feedback, camadaAti, camadas):
+    """Lista de restrições com as restrições oficiais garantidas (mesma regra dos CARs vizinhos)."""
+    projeto = context.project() or QgsProject.instance()
+    nomes = [c.name() for c in camadas]
+    if NOME_RESTRICOES in nomes or not projeto.mapLayersByName(NOME_RESTRICOES):
+        camada = garantirRestricoes(context, feedback, camadaAti)
+        if camada is not None:
+            camadas = [c for c in camadas if c.name() != NOME_RESTRICOES] + [camada]
+    return camadas

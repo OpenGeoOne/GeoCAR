@@ -440,6 +440,7 @@ class PosProcessamentoCopiaFixa(QgsProcessingLayerPostProcessorInterface):
             QTimer.singleShot(0, lambda: moverParaGrupo(projeto, idCamada, self.nomeGrupo))
             return
         total = substituirFeicoes(fixa, layer)
+        fixa.setCustomProperty('geocar/consulta', __import__('datetime').date.today().isoformat())
         if feedback:
             feedback.pushInfo(f'{self.nomeCamada}: {total} feição(ões) gravada(s) na camada do projeto '
                               '(as anteriores foram apagadas).')

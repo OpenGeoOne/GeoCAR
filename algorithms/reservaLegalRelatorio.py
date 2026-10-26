@@ -190,7 +190,7 @@ class ReservaLegalRelatorioCAR(QgsProcessingAlgorithm):
             # Data no nome: cada dia de trabalho fica com o seu relatório
             defaultValue=destinoPadrao(f"GeoCAR_Resultados_Pre-Analise_{datetime.now().strftime('%Y-%m-%d')}.pdf")))
         self.addParameter(QgsProcessingParameterBoolean(
-            self.AUTO_CONSULTAS, self.tr('Fazer as consultas que faltarem (vizinhos com CAR e com SIGEF)'), defaultValue=True))
+            self.AUTO_CONSULTAS, self.tr('Fazer as consultas que faltarem (vizinhos com CAR e com SIGEF, restrições oficiais)'), defaultValue=True))
         self.addParameter(QgsProcessingParameterBoolean(
             self.GERAR_CAMADAS,
             self.tr('Gerar também as camadas de resultado (as mesmas das ferramentas a e b)'),
@@ -212,13 +212,15 @@ class ReservaLegalRelatorioCAR(QgsProcessingAlgorithm):
         caminhoHtml = self.parameterAsFileOutput(parameters, self.OUTPUT_HTML, context)
         indiceRl = self.parameterAsEnum(parameters, self.PERCENTUAL_RL, context)
 
-        # Restrições e parcelas do SIGEF; as consultas que faltarem são feitas agora (vizinhos com CAR e com SIGEF)
+        # Restrições e parcelas do SIGEF; as consultas que faltarem são feitas agora (vizinhos com CAR e com SIGEF,
+        # restrições oficiais)
         restricoes = [c for c in self.parameterAsLayerList(parameters, self.INPUT_RESTRICOES, context)
                       if isinstance(c, QgsVectorLayer)]
         camadaSigef = self.parameterAsVectorLayer(parameters, self.INPUT_SIGEF, context)
         if self.parameterAsBool(parameters, self.AUTO_CONSULTAS, context):
-            from .nucleoCAR.consultas import completarSigef, completarVizinhos
+            from .nucleoCAR.consultas import completarRestricoes, completarSigef, completarVizinhos
             restricoes = completarVizinhos(context, feedback, camadaAti, restricoes)
+            restricoes = completarRestricoes(context, feedback, camadaAti, restricoes)
             camadaSigef = completarSigef(context, feedback, camadaAti, camadaSigef)
         self._camadasConsultadas = restricoes + [camadaSigef]   # mantém vivas as camadas temporárias
 
@@ -340,7 +342,7 @@ class ReservaLegalRelatorioCAR(QgsProcessingAlgorithm):
 
 A <b>primeira página</b> do relatório é o resumo <b>O que corrigir</b>, montado a partir dos resultados: o que resolver antes de enviar, ajustes pequenos, o que recompor e conferir, restrições próximas para ficar atento e os <b>documentos a reunir</b> para cada pendência.
 
-A opção <b>Gerar também as camadas de resultado</b> preenche as mesmas camadas das ferramentas <b>a</b>, <b>b</b> e <b>d</b>. Ela já vem marcada e grava nas camadas do grupo <b>Resultados da Pré-Análise</b>, no <b>Pre-Analise/PreAnalise.gpkg</b> do projeto (criado na primeira execução, se ainda não existir), apagando os resultados anteriores. O relatório fica na pasta <b>Pre-Analise/</b>. As entradas já vêm preenchidas com as camadas da RAIZ.
+A opção <b>Gerar também as camadas de resultado</b> preenche as mesmas camadas das ferramentas <b>a</b>, <b>b</b> e <b>d</b>. Ela já vem marcada e grava nas camadas do grupo <b>Resultados da Pré-Análise</b>, no <b>Pre-Analise/PreAnalise.gpkg</b> do projeto (criado na primeira execução, se ainda não existir), apagando os resultados anteriores. O relatório fica na pasta <b>Pre-Analise/</b>. As entradas já vêm preenchidas com as camadas da RAIZ. <b>Consultas:</b> se os vizinhos com CAR, as parcelas do SIGEF ou as restrições oficiais ainda não foram consultados no projeto, a ferramenta faz as consultas sozinha antes da análise (só na primeira vez; depois reaproveita).
 
 <b>Reserva Legal:</b>
 • RL exigida pelo percentual do art. 12 (20%, 35% ou 80%)

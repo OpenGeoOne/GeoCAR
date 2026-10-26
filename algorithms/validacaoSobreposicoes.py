@@ -99,7 +99,7 @@ class ValidacaoSobreposicoesCAR(QgsProcessingAlgorithm):
             defaultValue=PERC_DIVISA_PADRAO))
 
         self.addParameter(QgsProcessingParameterBoolean(
-            self.AUTO_CONSULTAS, self.tr('Fazer a Consulta CAR (vizinhos) se ainda não foi feita'), defaultValue=True))
+            self.AUTO_CONSULTAS, self.tr('Fazer as consultas que faltarem (vizinhos com CAR e restrições oficiais)'), defaultValue=True))
         adicionarSaida(self, self.OUTPUT_PROBLEMAS, 'Problemas de validação', 'Problemas_Validacao',
                        Qgis.ProcessingSourceType.VectorPoint)
         adicionarSaida(self, self.OUTPUT_SOBREPOSICOES, 'Sobreposições', 'Sobreposicoes', poligono)
@@ -119,8 +119,9 @@ class ValidacaoSobreposicoesCAR(QgsProcessingAlgorithm):
         camadasRestricao = [c for c in self.parameterAsLayerList(parameters, self.INPUT_RESTRICOES, context)
                             if isinstance(c, QgsVectorLayer)]
         if self.parameterAsBool(parameters, self.AUTO_CONSULTAS, context):
-            from .nucleoCAR.consultas import completarVizinhos
+            from .nucleoCAR.consultas import completarRestricoes, completarVizinhos
             camadasRestricao = completarVizinhos(context, feedback, camadaAti, camadasRestricao)
+            camadasRestricao = completarRestricoes(context, feedback, camadaAti, camadasRestricao)
         camadaVegetacao = self.parameterAsVectorLayer(parameters, self.INPUT_VEGETACAO, context)
         camadaConsolidada = self.parameterAsVectorLayer(parameters, self.INPUT_CONSOLIDADA, context)
 
@@ -253,6 +254,6 @@ class ValidacaoSobreposicoesCAR(QgsProcessingAlgorithm):
 • <b>Sobreposição relevante</b> — demais casos: conflito de área (CAR duplicado, matrícula-mãe e desmembramentos, posse e propriedade declaradas em CARs diferentes).
 
 Os cálculos são feitos em <b>SIRGAS 2000 / UTM</b> do fuso do imóvel, escolhido automaticamente.
-<b>Resultados:</b> vão para as camadas do grupo <b>Resultados da Pré-Análise</b>, no <b>Pre-Analise/PreAnalise.gpkg</b> do projeto (criado na primeira execução, se ainda não existir), apagando os anteriores; as saídas desta tela são cópias opcionais. Com o projeto ainda não salvo, os resultados saem em camadas temporárias. As entradas já vêm preenchidas com as camadas da RAIZ.
+<b>Resultados:</b> vão para as camadas do grupo <b>Resultados da Pré-Análise</b>, no <b>Pre-Analise/PreAnalise.gpkg</b> do projeto (criado na primeira execução, se ainda não existir), apagando os anteriores; as saídas desta tela são cópias opcionais. Com o projeto ainda não salvo, os resultados saem em camadas temporárias. As entradas já vêm preenchidas com as camadas da RAIZ. <b>Consultas:</b> se os vizinhos com CAR ou as restrições oficiais ainda não foram consultados no projeto, a ferramenta faz as consultas sozinha (só na primeira vez).
 """ + avisoLegal()
         return txt + rodapeAjuda()
