@@ -138,6 +138,40 @@ def projetoSalvo(projeto=None):
     return bool((projeto or QgsProject.instance()).homePath())
 
 
+def rotularProblemas(camada):
+    """
+    Rótulo "⚠ <tipo>" nos problemas de validação. Rótulos são desenhados por cima de todas as camadas,
+    então o problema aparece mesmo debaixo das camadas da RAIZ (vegetação, área consolidada...).
+    """
+    from qgis.PyQt.QtGui import QColor, QFont
+    from qgis.core import (QgsPalLayerSettings, QgsTextBackgroundSettings, QgsTextBufferSettings, QgsTextFormat,
+                           QgsVectorLayerSimpleLabeling)
+    formato = QgsTextFormat()
+    fonte = QFont()
+    fonte.setBold(True)
+    formato.setFont(fonte)
+    formato.setSize(10)
+    formato.setColor(QColor(180, 0, 0))
+    fundo = QgsTextBackgroundSettings()
+    fundo.setEnabled(True)
+    fundo.setFillColor(QColor(255, 215, 0))
+    fundo.setStrokeColor(QColor(0, 0, 0))
+    fundo.setStrokeWidth(0.3)
+    formato.setBackground(fundo)
+    contorno = QgsTextBufferSettings()
+    contorno.setEnabled(False)
+    formato.setBuffer(contorno)
+    rotulo = QgsPalLayerSettings()
+    rotulo.fieldName = "'⚠ ' || \"tipo\""
+    rotulo.isExpression = True
+    rotulo.setFormat(formato)
+    rotulo.yOffset = -4.0
+    rotulo.priority = 10
+    rotulo.displayAll = True
+    camada.setLabeling(QgsVectorLayerSimpleLabeling(rotulo))
+    camada.setLabelsEnabled(True)
+
+
 def estiloFixo(camada):
     """Estilo padrão das camadas fixas."""
     nome = camada.name()
@@ -145,6 +179,7 @@ def estiloFixo(camada):
         camada.setRenderer(QgsSingleSymbolRenderer(QgsMarkerSymbol.createSimple(
             # Triângulo de alerta amarelo: não confunde com a Sede (círculo vermelho) das RAIZ
             {'name': 'triangle', 'color': '255,215,0', 'outline_color': '0,0,0', 'outline_width': '0.4', 'size': '4.5'})))
+        rotularProblemas(camada)
     elif nome in ESTILOS_FIXOS:
         camada.setRenderer(QgsSingleSymbolRenderer(QgsFillSymbol.createSimple(ESTILOS_FIXOS[nome])))
     aplicarEstilo(camada)
