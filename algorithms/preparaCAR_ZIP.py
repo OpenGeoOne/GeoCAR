@@ -57,7 +57,7 @@ class preparaCAR_ZIP(QgsProcessingAlgorithm):
         return self.tr('a. Gerar Zip')
 
     def group(self):
-        return self.tr('4. 📤 Gerar arquivos para o CAR')
+        return self.tr('5. 📤 Gerar arquivos para o CAR')
 
     def groupId(self):
         return 'gerararquivoscar'

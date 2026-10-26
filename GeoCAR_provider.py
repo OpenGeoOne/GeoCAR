@@ -43,6 +43,7 @@ from .algorithms.reservaLegalRelatorio import ReservaLegalRelatorioCAR
 from .algorithms.consistenciaCamadas import ConsistenciaCamadasCAR
 from .algorithms.consultaRestricoes import ConsultaRestricoesCAR
 from .algorithms.consultaSIGEF import ConsultaSigefCAR
+from .algorithms.correcaoGeometria import CorrigirGeometriaAtiCAR, RecortarPelaAtiCAR, PreencherLascasCAR
 
 class GeoCARProvider(QgsProcessingProvider):
     def __init__(self):
@@ -65,6 +66,9 @@ class GeoCARProvider(QgsProcessingProvider):
         self.addAlgorithm(ConsistenciaCamadasCAR())
         self.addAlgorithm(ConsultaRestricoesCAR())
         self.addAlgorithm(ConsultaSigefCAR())
+        self.addAlgorithm(CorrigirGeometriaAtiCAR())
+        self.addAlgorithm(RecortarPelaAtiCAR())
+        self.addAlgorithm(PreencherLascasCAR())
 
     def id(self):
         return 'GeoCAR'
