@@ -37,6 +37,7 @@ from qgis.core import (
     QgsProcessingAlgorithm,
     QgsProcessingException,
     QgsProcessingOutputNumber,
+    QgsProcessingParameterBoolean,
     QgsProcessingParameterFeatureSink,
     QgsProcessingParameterMultipleLayers,
     QgsProcessingParameterNumber,
@@ -61,6 +62,7 @@ class ValidacaoSobreposicoesCAR(QgsProcessingAlgorithm):
     INPUT_VEGETACAO = 'INPUT_VEGETACAO'
     INPUT_CONSOLIDADA = 'INPUT_CONSOLIDADA'
     LARGURA_DIVISA = 'LARGURA_DIVISA'
+    AUTO_CONSULTAS = 'AUTO_CONSULTAS'
     PERC_DIVISA = 'PERC_DIVISA'
     OUTPUT_PROBLEMAS = 'OUTPUT_PROBLEMAS'
     OUTPUT_SOBREPOSICOES = 'OUTPUT_SOBREPOSICOES'
@@ -96,6 +98,8 @@ class ValidacaoSobreposicoesCAR(QgsProcessingAlgorithm):
             type=Qgis.ProcessingNumberParameterType.Double, minValue=0.0, maxValue=100.0,
             defaultValue=PERC_DIVISA_PADRAO))
 
+        self.addParameter(QgsProcessingParameterBoolean(
+            self.AUTO_CONSULTAS, self.tr('Fazer a Consulta CAR (vizinhos) se ainda não foi feita'), defaultValue=True))
         adicionarSaida(self, self.OUTPUT_PROBLEMAS, 'Problemas de validação', 'Problemas_Validacao',
                        Qgis.ProcessingSourceType.VectorPoint)
         adicionarSaida(self, self.OUTPUT_SOBREPOSICOES, 'Sobreposições', 'Sobreposicoes', poligono)
@@ -114,6 +118,9 @@ class ValidacaoSobreposicoesCAR(QgsProcessingAlgorithm):
 
         camadasRestricao = [c for c in self.parameterAsLayerList(parameters, self.INPUT_RESTRICOES, context)
                             if isinstance(c, QgsVectorLayer)]
+        if self.parameterAsBool(parameters, self.AUTO_CONSULTAS, context):
+            from .nucleoCAR.consultas import completarVizinhos
+            camadasRestricao = completarVizinhos(context, feedback, camadaAti, camadasRestricao)
         camadaVegetacao = self.parameterAsVectorLayer(parameters, self.INPUT_VEGETACAO, context)
         camadaConsolidada = self.parameterAsVectorLayer(parameters, self.INPUT_CONSOLIDADA, context)
 

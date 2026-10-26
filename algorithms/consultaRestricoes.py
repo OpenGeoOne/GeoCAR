@@ -47,7 +47,6 @@ from qgis.core import (
     QgsGeometry,
     QgsProcessingAlgorithm,
     QgsProcessingException,
-    QgsProcessingParameterBoolean,
     QgsProcessingParameterEnum,
     QgsProcessingParameterFeatureSink,
     QgsProcessingParameterNumber,
@@ -64,21 +63,6 @@ from .nucleoCAR.processingCAR import PosProcessamentoCopiaFixa, avisoLegal, cama
 NOME_RESTRICOES = 'Restricoes_Territoriais'
 GRUPO_RESTRICOES = 'Areas_Vizinhas'
 ARQUIVO_FONTES = os.path.join(os.path.dirname(__file__), 'nucleoCAR', 'fontes_restricoes.json')
-
-
-NOME_SIGEF = 'Parcelas_SIGEF'
-
-
-def carregarConfiguracao():
-    with open(ARQUIVO_FONTES, encoding='utf-8') as arquivo:
-        return json.load(arquivo)
-
-
-def camposSigef():
-    campos = QgsFields()
-    for nome in ('parcela', 'codigo_imovel', 'nome_area', 'matricula', 'situacao', 'aprovacao', 'fonte', 'consulta'):
-        campos.append(QgsField(nome, QMetaType.Type.QString))
-    return campos
 
 
 def carregarFontes():
@@ -176,9 +160,7 @@ class ConsultaRestricoesCAR(QgsProcessingAlgorithm):
     INPUT_ATI = 'INPUT_ATI'
     MARGEM = 'MARGEM'
     FONTES = 'FONTES'
-    SIGEF = 'SIGEF'
     OUTPUT = 'OUTPUT'
-    OUTPUT_SIGEF = 'OUTPUT_SIGEF'
 
     def initAlgorithm(self, config=None):
         self.addParameter(QgsProcessingParameterVectorLayer(
@@ -190,13 +172,8 @@ class ConsultaRestricoesCAR(QgsProcessingAlgorithm):
         self.addParameter(QgsProcessingParameterEnum(
             self.FONTES, self.tr('Restrições a consultar'), options=[f['tipo'] for f in carregarFontes()],
             allowMultiple=True, defaultValue=list(range(len(carregarFontes())))))
-        self.addParameter(QgsProcessingParameterBoolean(
-            self.SIGEF, self.tr('Consultar também as parcelas certificadas no SIGEF (comparação com a ATI na 3c)'),
-            defaultValue=True))
         self.addParameter(QgsProcessingParameterFeatureSink(
             self.OUTPUT, self.tr('Restrições encontradas')))
-        self.addParameter(QgsProcessingParameterFeatureSink(
-            self.OUTPUT_SIGEF, self.tr('Parcelas certificadas (SIGEF)'), optional=True))
 
     def processAlgorithm(self, parameters, context, feedback):
         camadaAti = self.parameterAsVectorLayer(parameters, self.INPUT_ATI, context)
@@ -262,42 +239,6 @@ class ConsultaRestricoesCAR(QgsProcessingAlgorithm):
 
         feedback.pushInfo(self.tr(f'Total: {total} área(s) de restrição na ATI e na margem de {margem:g} m.'))
 
-        # Parcelas certificadas no SIGEF (imóveis privados), gravadas à parte para a comparação com a ATI
-        idSigef = None
-        if self.parameterAsBool(parameters, self.SIGEF, context) and not feedback.isCanceled():
-            definicao = carregarConfiguracao().get('sigef')
-            camposS = camposSigef()
-            sinkSigef, idSigef = self.parameterAsSink(parameters, self.OUTPUT_SIGEF, context, camposS,
-                                                      QgsWkbTypes.MultiPolygon, crsGeo)
-            if definicao and sinkSigef is not None:
-                feedback.pushInfo(self.tr('Consultando: parcelas certificadas no SIGEF...'))
-                camada = _abrirServico(dict(definicao, servico='arcgis'), feedback)
-                if camada is None:
-                    feedback.reportError(self.tr('SIGEF: serviço indisponível no momento.'), fatalError=False)
-                else:
-                    nomes = camada.fields().names()
-                    paraCamada = QgsCoordinateTransform(crsGeo, camada.crs(), QgsProject.instance())
-                    paraGeo = QgsCoordinateTransform(camada.crs(), crsGeo, QgsProject.instance())
-                    pedido = QgsFeatureRequest().setFilterRect(paraCamada.transformBoundingBox(extensao))
-                    pedido.setFeedback(feedback)
-                    parcelas = 0
-                    for feicao in camada.getFeatures(pedido):
-                        geometria = QgsGeometry(feicao.geometry())
-                        if geometria.isNull():
-                            continue
-                        geometria.transform(paraGeo)
-                        if not geometria.intersects(areaBusca):
-                            continue
-                        geometria.convertToMultiType()
-                        nova = QgsFeature(camposS)
-                        nova.setGeometry(geometria)
-                        nova.setAttributes([_valor(feicao, nomes, ['parcela_co']), _valor(feicao, nomes, ['codigo_imo']),
-                                            _valor(feicao, nomes, ['nome_area']), _valor(feicao, nomes, ['registro_m']),
-                                            ' — '.join(v for v in (_valor(feicao, nomes, [c]) for c in ('status', 'situacao_i')) if v),
-                                            _valor(feicao, nomes, ['data_aprov']), definicao['fonte'], hoje])
-                        sinkSigef.addFeature(nova, QgsFeatureSink.FastInsert)
-                        parcelas += 1
-                    feedback.pushInfo(self.tr(f'SIGEF: {parcelas} parcela(s) certificada(s)'))
         feedback.pushInfo(self.tr('GeoCAR - GeoOne'))
 
         # No fim, a camada vai para a camada fixa Restricoes_Territoriais (PreAnalise.gpkg), apagando a anterior
@@ -305,20 +246,13 @@ class ConsultaRestricoesCAR(QgsProcessingAlgorithm):
             global posRestricoes
             posRestricoes = PosProcessamentoCopiaFixa(NOME_RESTRICOES, GRUPO_RESTRICOES)
             context.layerToLoadOnCompletionDetails(destId).setPostProcessor(posRestricoes)
-        resultados = {self.OUTPUT: destId}
-        if idSigef:
-            if context.willLoadLayerOnCompletion(idSigef):
-                global posSigef
-                posSigef = PosProcessamentoCopiaFixa(NOME_SIGEF, GRUPO_RESTRICOES)
-                context.layerToLoadOnCompletionDetails(idSigef).setPostProcessor(posSigef)
-            resultados[self.OUTPUT_SIGEF] = idSigef
-        return resultados
+        return {self.OUTPUT: destId}
 
     def name(self):
         return 'consultarestricoescar'
 
     def displayName(self):
-        return self.tr('c. Consulta de restrições (UC, TI, assentamentos, embargos)')
+        return self.tr('d. Consulta de restrições (UC, TI, assentamentos, embargos)')
 
     def group(self):
         return self.tr('1. 🔍 Consultas')
@@ -348,7 +282,6 @@ class ConsultaRestricoesCAR(QgsProcessingAlgorithm):
 • <b>Florestas Públicas</b>, <b>terras públicas não destinadas</b> e <b>áreas militares</b> — Serviço Florestal Brasileiro
 • <b>Glebas públicas federais</b> — SIGEF público (INCRA)
 
-Com a opção do SIGEF, também baixa as <b>parcelas certificadas</b> de imóveis privados para a camada <b>Parcelas_SIGEF</b>, que a ferramenta <b>3c</b> compara com a ATI (titularidade, matrículas e áreas sem certificação).
 
 O resultado vai para a camada <b>Restricoes_Territoriais</b> (grupo <b>Areas_Vizinhas</b>, no <b>Pre-Analise/PreAnalise.gpkg</b>), apagando a consulta anterior, e entra automaticamente como camada de restrição nas ferramentas <b>3a</b> e <b>3c</b>.
 

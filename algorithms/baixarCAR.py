@@ -223,6 +223,8 @@ class baixarCAR(QgsProcessingAlgorithm):
 
         if camadaVizinhos is not None:
             total = substituirFeicoes(camadaVizinhos, memoria)
+            from .nucleoCAR.consultas import marcarConsulta
+            marcarConsulta(camadaVizinhos)
             feedback.pushInfo(f'{NOME_VIZINHOS}: {total} imóvel(is) gravado(s) na camada do projeto '
                               '(os anteriores foram apagados).')
         elif dest_id and context.willLoadLayerOnCompletion(dest_id):

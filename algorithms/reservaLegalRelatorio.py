@@ -80,6 +80,7 @@ class ReservaLegalRelatorioCAR(QgsProcessingAlgorithm):
     INPUT_RESERVAS = 'INPUT_RESERVAS'
     INPUT_SERVIDOES = 'INPUT_SERVIDOES'
     INPUT_SIGEF = 'INPUT_SIGEF'
+    AUTO_CONSULTAS = 'AUTO_CONSULTAS'
     IMOVEL = 'IMOVEL'
     MUNICIPIO_UF = 'MUNICIPIO_UF'
     PROPRIETARIO = 'PROPRIETARIO'
@@ -189,6 +190,8 @@ class ReservaLegalRelatorioCAR(QgsProcessingAlgorithm):
             # Data no nome: cada dia de trabalho fica com o seu relatório
             defaultValue=destinoPadrao(f"GeoCAR_Resultados_Pre-Analise_{datetime.now().strftime('%Y-%m-%d')}.pdf")))
         self.addParameter(QgsProcessingParameterBoolean(
+            self.AUTO_CONSULTAS, self.tr('Fazer as consultas que faltarem (vizinhos com CAR e com SIGEF)'), defaultValue=True))
+        self.addParameter(QgsProcessingParameterBoolean(
             self.GERAR_CAMADAS,
             self.tr('Gerar também as camadas de resultado (as mesmas das ferramentas a e b)'),
             # Marcada quando a RAIZ tem as camadas fixas de resultado
@@ -209,12 +212,21 @@ class ReservaLegalRelatorioCAR(QgsProcessingAlgorithm):
         caminhoHtml = self.parameterAsFileOutput(parameters, self.OUTPUT_HTML, context)
         indiceRl = self.parameterAsEnum(parameters, self.PERCENTUAL_RL, context)
 
+        # Restrições e parcelas do SIGEF; as consultas que faltarem são feitas agora (vizinhos com CAR e com SIGEF)
+        restricoes = [c for c in self.parameterAsLayerList(parameters, self.INPUT_RESTRICOES, context)
+                      if isinstance(c, QgsVectorLayer)]
+        camadaSigef = self.parameterAsVectorLayer(parameters, self.INPUT_SIGEF, context)
+        if self.parameterAsBool(parameters, self.AUTO_CONSULTAS, context):
+            from .nucleoCAR.consultas import completarSigef, completarVizinhos
+            restricoes = completarVizinhos(context, feedback, camadaAti, restricoes)
+            camadaSigef = completarSigef(context, feedback, camadaAti, camadaSigef)
+        self._camadasConsultadas = restricoes + [camadaSigef]   # mantém vivas as camadas temporárias
+
         parametrosAnalise = {
             'perimetro': camadaAti,
             'modulo_fiscal_ha': resolverModuloFiscal(
                 self.parameterAsDouble(parameters, self.MODULO_FISCAL, context), camadaAti,
-                [c for c in self.parameterAsLayerList(parameters, self.INPUT_RESTRICOES, context)
-                 if isinstance(c, QgsVectorLayer)], feedback, context.project()),
+                restricoes, feedback, context.project()),
             'area_2008_ha': self.parameterAsDouble(parameters, self.AREA_2008, context),
             'pct_rl': VALORES_RL[indiceRl],
             'vegetacao': self.parameterAsVectorLayer(parameters, self.INPUT_VEGETACAO, context),
@@ -226,8 +238,7 @@ class ReservaLegalRelatorioCAR(QgsProcessingAlgorithm):
             'lagos': self.parameterAsVectorLayer(parameters, self.INPUT_LAGOS, context),
             'rios_poligono': [c for c in self.parameterAsLayerList(parameters, self.INPUT_RIOS_POLIGONO, context)
                               if c is not None and c.type() == 0],
-            'restricoes': [c for c in self.parameterAsLayerList(parameters, self.INPUT_RESTRICOES, context)
-                           if isinstance(c, QgsVectorLayer)],
+            'restricoes': restricoes,
             'largura_divisa': self.parameterAsDouble(parameters, self.LARGURA_DIVISA, context),
             'perc_divisa': self.parameterAsDouble(parameters, self.PERC_DIVISA, context),
             'modulo_automatico': self.parameterAsDouble(parameters, self.MODULO_FISCAL, context) <= 0,
@@ -237,7 +248,7 @@ class ReservaLegalRelatorioCAR(QgsProcessingAlgorithm):
                          if isinstance(c, QgsVectorLayer)],
             'servidoes': [c for c in self.parameterAsLayerList(parameters, self.INPUT_SERVIDOES, context)
                           if isinstance(c, QgsVectorLayer)],
-            'sigef': [c for c in [self.parameterAsVectorLayer(parameters, self.INPUT_SIGEF, context)] if c is not None],
+            'sigef': [c for c in [camadaSigef] if c is not None],
             'caminho_relatorio': caminhoHtml,
             'identificacao': {rotulo: self.parameterAsString(parameters, chave, context).strip()
                               for chave, rotulo in self.IDENTIFICACAO},

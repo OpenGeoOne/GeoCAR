@@ -37,6 +37,7 @@ from qgis.core import (
     QgsProcessingAlgorithm,
     QgsProcessingException,
     QgsProcessingOutputNumber,
+    QgsProcessingParameterBoolean,
     QgsProcessingParameterFeatureSink,
     QgsProcessingParameterField,
     QgsProcessingParameterMultipleLayers,
@@ -75,6 +76,7 @@ class AppHidricaCAR(QgsProcessingAlgorithm):
     OUTPUT_AREA_INTEGRAL = 'OUTPUT_AREA_INTEGRAL'
     OUTPUT_AREA_RECOMPOR = 'OUTPUT_AREA_RECOMPOR'
     OUTPUT_LIMITE_61B = 'OUTPUT_LIMITE_61B'
+    AUTO_CONSULTAS = 'AUTO_CONSULTAS'
 
     SAIDAS = [
         (OUTPUT_APP_INTEGRAL, 'APP integral (art. 4º)'),
@@ -140,6 +142,8 @@ class AppHidricaCAR(QgsProcessingAlgorithm):
             self.INPUT_CONSOLIDADA, self.tr('Área rural consolidada até 22/07/2008 (opcional)'),
             [poligono], optional=True, defaultValue=camadaPadrao('consolidada')))
 
+        self.addParameter(QgsProcessingParameterBoolean(
+            self.AUTO_CONSULTAS, self.tr('Fazer a Consulta CAR (vizinhos) se ainda não foi feita — usada no módulo fiscal automático'), defaultValue=True))
         for chave, rotulo in self.SAIDAS:
             adicionarSaida(self, chave, rotulo, self.NOMES_SAIDAS[chave], poligono)
 
@@ -155,8 +159,12 @@ class AppHidricaCAR(QgsProcessingAlgorithm):
         if camadaAti is None or camadaAti.featureCount() == 0:
             raise QgsProcessingException(self.tr('A camada ATI está vazia ou não foi informada.'))
 
-        moduloFiscal = resolverModuloFiscal(self.parameterAsDouble(parameters, self.MODULO_FISCAL, context),
-                                            camadaAti, [], feedback, context.project())
+        valorModulo = self.parameterAsDouble(parameters, self.MODULO_FISCAL, context)
+        vizinhos = []
+        if valorModulo <= 0 and self.parameterAsBool(parameters, self.AUTO_CONSULTAS, context):
+            from .nucleoCAR.consultas import garantirVizinhosCAR
+            vizinhos = [c for c in [garantirVizinhosCAR(context, feedback, camadaAti)] if c is not None]
+        moduloFiscal = resolverModuloFiscal(valorModulo, camadaAti, vizinhos, feedback, context.project())
         area2008 = self.parameterAsDouble(parameters, self.AREA_2008, context)
         camadaHidro = self.parameterAsVectorLayer(parameters, self.INPUT_HIDROGRAFIA, context)
         campoLargura = self.parameterAsString(parameters, self.CAMPO_LARGURA, context) or None
