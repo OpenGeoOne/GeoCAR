@@ -50,6 +50,7 @@ CANDIDATOS = {
     'lagos': ['Lago_Lagoa_Natural_50m', 'LAGO_LAGOA_NATURAL', 'LAGOA_NATURAL', 'Lago_ou_Lagoa_Natural'],
     'restricoes': ['CAR_Vizinhos_SICAR', 'Restricoes_Territoriais'],
     'sigef': ['Parcelas_SIGEF'],
+    'prodes': ['Desmatamento_PRODES'],
     # Consistência entre camadas (3d): outras coberturas do solo, Reserva Legal e servidão administrativa
     'coberturas': ['Area_Consolidada', 'AREA_CONSOLIDADA', 'AC', 'Area_Pousio', 'Pousio', 'POUSIO'],
     'reservas': ['RL_Proposta', 'RL_Averbada', 'RL_Aprovada_Nao_Averbada', 'RL_Vinculada_Outro_Imovel',
@@ -101,6 +102,9 @@ CAMADAS_FIXAS = {
                                                  ('data', _S), ('fonte', _S), ('consulta', _S)]),
     'Area_Consolidada': ('MultiPolygon', [('observacao', _S)]),
     'RL_Rascunho': ('MultiPolygon', [('origem', _S), ('area_ha', _D)]),
+    'Desmatamento_PRODES': ('MultiPolygon', [('bioma', _S), ('ano', _I), ('data_imagem', _S), ('periodo', _S),
+                                             ('area_ha', _D), ('fonte', _S), ('consulta', _S)]),
+    'Desmatamento_Pos_2008': ('MultiPolygon', [('tipo', _S), ('ano', _I), ('data_imagem', _S), ('area_ha', _D)]),
     'Problemas_Validacao': ('Point', [('feicao', _S), ('tipo', _S), ('descricao', _S)]),
     'Sobreposicoes': ('MultiPolygon', [('camada', _S), ('identific', _S), ('classe', _S), ('area_ha', _D),
                                           ('perc', _D), ('larg_med', _D)]),
@@ -113,9 +117,10 @@ CAMADAS_FIXAS = {
                                             ('descricao', _S)]),
 }
 GRUPOS_FIXOS = [
-    ('Areas_Vizinhas', ['CAR_Vizinhos_SICAR', 'Restricoes_Territoriais', 'Parcelas_SIGEF']),
+    ('Areas_Vizinhas', ['CAR_Vizinhos_SICAR', 'Restricoes_Territoriais', 'Parcelas_SIGEF', 'Desmatamento_PRODES']),
     ('Apoio à Pré-Análise', ['Area_Consolidada', 'RL_Rascunho']),
-    (GRUPO_RESULTADOS_FIXO, ['Problemas_Validacao', 'Sobreposicoes', 'Inconsistencias', 'Divergencias_SIGEF']),
+    (GRUPO_RESULTADOS_FIXO, ['Problemas_Validacao', 'Sobreposicoes', 'Inconsistencias', 'Divergencias_SIGEF',
+                              'Desmatamento_Pos_2008']),
     # Subgrupo com as camadas da APP hídrica (ferramenta b)
     (GRUPO_RESULTADOS_FIXO + '/' + SUBGRUPO_APP, ['APP_Integral', 'Faixa_Escadinha', 'APP_Recompor_Consolidada',
                                                   'Uso_Consolidado_em_APP', 'APP_Fora_Consolidada']),
@@ -424,7 +429,27 @@ class PosProcessamentoGrupo(QgsProcessingLayerPostProcessorInterface):
 
 def aplicarEstilo(camada):
     """Sobreposições por classe (relevante em vermelho, ajuste de divisa em laranja); inconsistências por gravidade;
-    divergências com o SIGEF por tipo."""
+    divergências com o SIGEF por tipo; desmatamento do PRODES por período e após 2008 por tipo."""
+    if camada.name() == 'Desmatamento_PRODES' or camada.fields().indexFromName('periodo') >= 0:
+        cores = [('Após 22/07/2008', '220,0,0,110', '160,0,0'),
+                 ('A confirmar (detectado em 2008)', '255,140,0,110', '200,100,0'),
+                 ('Antes de 22/07/2008', '150,150,150,60', '110,110,110')]
+        camada.setRenderer(QgsCategorizedSymbolRenderer('periodo', [
+            QgsRendererCategory(v, QgsFillSymbol.createSimple({'color': cor, 'outline_color': borda,
+                                                                'outline_width': '0.4'}), v)
+            for v, cor, borda in cores]))
+        return
+    if camada.name() == 'Desmatamento_Pos_2008':
+        cores = [('Área consolidada sobre desmatamento após 2008', '220,0,0,170', '140,0,0'),
+                 ('Reserva Legal desmatada após 2008', '170,0,170,150', '110,0,110'),
+                 ('APP desmatada após 2008', '0,90,220,140', '0,60,160'),
+                 ('Desmatamento após 22/07/2008 na ATI', '255,90,0,90', '200,60,0'),
+                 ('Desmatamento a confirmar (2008) na ATI', '255,170,0,90', '200,120,0')]
+        camada.setRenderer(QgsCategorizedSymbolRenderer('tipo', [
+            QgsRendererCategory(v, QgsFillSymbol.createSimple({'color': cor, 'outline_color': borda,
+                                                                'outline_width': '0.6'}), v)
+            for v, cor, borda in cores]))
+        return
     if camada.name() == 'Divergencias_SIGEF' or (camada.fields().indexFromName('matricula') >= 0
                                                  and camada.fields().indexFromName('area_ha') >= 0):
         cores = [('Parcela de terceiro dentro da ATI', '220,0,0,150', '150,0,0'),

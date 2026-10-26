@@ -21,6 +21,7 @@ NOME_VIZINHOS = 'CAR_Vizinhos_SICAR'
 NOME_SIGEF = 'Parcelas_SIGEF'
 NOME_RESTRICOES = 'Restricoes_Territoriais'
 MARGEM_RESTRICOES_M = 2000.0
+MARGEM_PRODES_M = 500.0
 PROPRIEDADE_CONSULTA = 'geocar/consulta'   # data da última consulta, guardada na camada (salva no projeto)
 MARGEM_VIZINHOS_M = 1000.0
 MARGEM_SIGEF_M = 1000.0   # mesma margem dos CARs vizinhos: traz também os imóveis certificados vizinhos
@@ -232,3 +233,37 @@ def completarRestricoes(context, feedback, camadaAti, camadas):
         if camada is not None:
             camadas = [c for c in camadas if c.name() != NOME_RESTRICOES] + [camada]
     return camadas
+
+
+def garantirProdes(context, feedback, camadaAti):
+    """
+    Desmatamento do PRODES para a análise. Ainda não consultado no projeto: consulta pela extensão da ATI e grava
+    na camada fixa Desmatamento_PRODES (projeto salvo) ou devolve a camada de memória.
+    """
+    from .desmatamento import NOME_PRODES, consultarProdes
+
+    projeto = context.project() or QgsProject.instance()
+    fixa = garantirCamadaFixa(NOME_PRODES, projeto)
+    if jaConsultada(fixa):
+        return fixa
+    feedback.pushInfo('Desmatamento (PRODES) ainda não consultado: consultando o TerraBrasilis/INPE pela ATI...')
+    memoria = consultarProdes(extensaoDaAti(camadaAti, MARGEM_PRODES_M), feedback)
+    if memoria is None:
+        return fixa if jaConsultada(fixa) else None
+    if fixa is None:
+        return memoria
+    substituirFeicoes(fixa, memoria)
+    marcarConsulta(fixa)
+    return fixa
+
+
+def completarProdes(context, feedback, camadaAti, camada):
+    """Camada do PRODES para a 3c: consulta quando é a camada fixa ainda não consultada, ou não existe."""
+    from .desmatamento import NOME_PRODES
+
+    projeto = context.project() or QgsProject.instance()
+    if camada is None and not projeto.mapLayersByName(NOME_PRODES):
+        return garantirProdes(context, feedback, camadaAti)
+    if camada is not None and camada.name() == NOME_PRODES and not jaConsultada(camada):
+        return garantirProdes(context, feedback, camadaAti)
+    return camada

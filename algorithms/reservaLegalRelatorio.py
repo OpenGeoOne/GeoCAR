@@ -80,6 +80,7 @@ class ReservaLegalRelatorioCAR(QgsProcessingAlgorithm):
     INPUT_RESERVAS = 'INPUT_RESERVAS'
     INPUT_SERVIDOES = 'INPUT_SERVIDOES'
     INPUT_SIGEF = 'INPUT_SIGEF'
+    INPUT_PRODES = 'INPUT_PRODES'
     AUTO_CONSULTAS = 'AUTO_CONSULTAS'
     IMOVEL = 'IMOVEL'
     MUNICIPIO_UF = 'MUNICIPIO_UF'
@@ -105,6 +106,7 @@ class ReservaLegalRelatorioCAR(QgsProcessingAlgorithm):
         'APP fora de área consolidada': 'APP_Fora_Consolidada',
         'Inconsistências': 'Inconsistencias',
         'Divergências SIGEF': 'Divergencias_SIGEF',
+        'Desmatamento após 2008': 'Desmatamento_Pos_2008',
     }
 
     OUTPUT_RL_EXIGIDA = 'OUTPUT_RL_EXIGIDA'
@@ -184,13 +186,19 @@ class ReservaLegalRelatorioCAR(QgsProcessingAlgorithm):
             optional=True, defaultValue=camadaPadrao('sigef'))
         parametro.setFlags(parametro.flags() | Qgis.ProcessingParameterFlag.Advanced)
         self.addParameter(parametro)
+        parametro = QgsProcessingParameterVectorLayer(
+            self.INPUT_PRODES, self.tr('Desmatamento do PRODES (comparação com o marco de 22/07/2008)'), [poligono],
+            optional=True, defaultValue=camadaPadrao('prodes'))
+        parametro.setFlags(parametro.flags() | Qgis.ProcessingParameterFlag.Advanced)
+        self.addParameter(parametro)
         self.addParameter(QgsProcessingParameterFileDestination(
             self.OUTPUT_HTML, self.tr('Relatório de pré-análise (PDF ou HTML)'),
             fileFilter='PDF (*.pdf);;HTML (*.html)',
             # Data no nome: cada dia de trabalho fica com o seu relatório
             defaultValue=destinoPadrao(f"GeoCAR_Resultados_Pre-Analise_{datetime.now().strftime('%Y-%m-%d')}.pdf")))
         self.addParameter(QgsProcessingParameterBoolean(
-            self.AUTO_CONSULTAS, self.tr('Fazer as consultas que faltarem (vizinhos com CAR e com SIGEF, restrições oficiais)'), defaultValue=True))
+            self.AUTO_CONSULTAS, self.tr('Fazer as consultas que faltarem (vizinhos com CAR e com SIGEF, restrições oficiais, '
+                                         'desmatamento do PRODES)'), defaultValue=True))
         self.addParameter(QgsProcessingParameterBoolean(
             self.GERAR_CAMADAS,
             self.tr('Gerar também as camadas de resultado (as mesmas das ferramentas a e b)'),
@@ -217,12 +225,15 @@ class ReservaLegalRelatorioCAR(QgsProcessingAlgorithm):
         restricoes = [c for c in self.parameterAsLayerList(parameters, self.INPUT_RESTRICOES, context)
                       if isinstance(c, QgsVectorLayer)]
         camadaSigef = self.parameterAsVectorLayer(parameters, self.INPUT_SIGEF, context)
+        camadaProdes = self.parameterAsVectorLayer(parameters, self.INPUT_PRODES, context)
         if self.parameterAsBool(parameters, self.AUTO_CONSULTAS, context):
             from .nucleoCAR.consultas import completarRestricoes, completarSigef, completarVizinhos
             restricoes = completarVizinhos(context, feedback, camadaAti, restricoes)
             restricoes = completarRestricoes(context, feedback, camadaAti, restricoes)
             camadaSigef = completarSigef(context, feedback, camadaAti, camadaSigef)
-        self._camadasConsultadas = restricoes + [camadaSigef]   # mantém vivas as camadas temporárias
+            from .nucleoCAR.consultas import completarProdes
+            camadaProdes = completarProdes(context, feedback, camadaAti, camadaProdes)
+        self._camadasConsultadas = restricoes + [camadaSigef, camadaProdes]   # mantém vivas as camadas temporárias
 
         parametrosAnalise = {
             'perimetro': camadaAti,
@@ -251,6 +262,7 @@ class ReservaLegalRelatorioCAR(QgsProcessingAlgorithm):
             'servidoes': [c for c in self.parameterAsLayerList(parameters, self.INPUT_SERVIDOES, context)
                           if isinstance(c, QgsVectorLayer)],
             'sigef': [c for c in [camadaSigef] if c is not None],
+            'prodes': [c for c in [camadaProdes] if c is not None],
             'caminho_relatorio': caminhoHtml,
             'identificacao': {rotulo: self.parameterAsString(parameters, chave, context).strip()
                               for chave, rotulo in self.IDENTIFICACAO},

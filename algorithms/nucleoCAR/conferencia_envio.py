@@ -116,6 +116,15 @@ def conferir(projeto=None):
     if n:
         itens.append((ATENCAO, f'Pré-análise: a ATI avança sobre {n} parcela(s) certificada(s) de terceiros no SIGEF.'))
 
+    n, _ = contar('Desmatamento_Pos_2008', 'tipo', ('Área consolidada sobre desmatamento após 2008',))
+    if n:
+        itens.append((IMPEDE, 'Pré-análise: área consolidada declarada sobre desmatamento detectado pelo PRODES depois '
+                              'de 22/07/2008, que não pode ser consolidada (Lei 12.651/2012, art. 3º, IV).'))
+    n, _ = contar('Desmatamento_Pos_2008', 'tipo', ('APP desmatada após 2008', 'Reserva Legal desmatada após 2008'))
+    if n:
+        itens.append((ATENCAO, 'Pré-análise: APP ou Reserva Legal desmatada depois de 22/07/2008 (PRODES): '
+                               'recomposição obrigatória (arts. 7º e 17).'))
+
     # 5. Reserva Legal declarada?
     from .processingCAR import CANDIDATOS
     reservas = [c for c in camadas if c.name() in CANDIDATOS['reservas']]

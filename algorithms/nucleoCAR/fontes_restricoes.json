@@ -244,5 +244,18 @@
     "url": "https://pamgia.ibama.gov.br/server/rest/services/01_Publicacoes_Bases/lim_imovel_sigef_privado_a/FeatureServer/9",
     "fonte": "INCRA — SIGEF (via IBAMA)",
     "_comentario": "Parcelas certificadas (imóveis privados): vão para a camada Parcelas_SIGEF e são comparadas com a ATI na ferramenta 3c."
+  },
+  "prodes": {
+    "url": "https://terrabrasilis.dpi.inpe.br/geoserver/ows",
+    "fonte": "PRODES/INPE (TerraBrasilis)",
+    "timeout": 30,
+    "camadas": {
+      "Amazônia": "prodes-amazon-nb:yearly_deforestation_biome",
+      "Cerrado": "prodes-cerrado-nb:yearly_deforestation",
+      "Mata Atlântica": "prodes-mata-atlantica-nb:yearly_deforestation",
+      "Caatinga": "prodes-caatinga-nb:yearly_deforestation",
+      "Pampa": "prodes-pampa-nb:yearly_deforestation",
+      "Pantanal": "prodes-pantanal-nb:yearly_deforestation"
+    }
   }
 }

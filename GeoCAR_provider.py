@@ -43,6 +43,7 @@ from .algorithms.reservaLegalRelatorio import ReservaLegalRelatorioCAR
 from .algorithms.consistenciaCamadas import ConsistenciaCamadasCAR
 from .algorithms.consultaRestricoes import ConsultaRestricoesCAR
 from .algorithms.consultaSIGEF import ConsultaSigefCAR
+from .algorithms.consultaDesmatamento import ConsultaDesmatamentoCAR
 from .algorithms.correcaoGeometria import (CorrigirGeometriaAtiCAR, RecortarPelaAtiCAR, ResolverSobreposicoesCAR,
                                               PreencherLascasCAR)
 from .algorithms.propostaReservaLegal import PropostaReservaLegalCAR
@@ -69,6 +70,7 @@ class GeoCARProvider(QgsProcessingProvider):
         self.addAlgorithm(ConsistenciaCamadasCAR())
         self.addAlgorithm(ConsultaRestricoesCAR())
         self.addAlgorithm(ConsultaSigefCAR())
+        self.addAlgorithm(ConsultaDesmatamentoCAR())
         self.addAlgorithm(CorrigirGeometriaAtiCAR())
         self.addAlgorithm(RecortarPelaAtiCAR())
         self.addAlgorithm(ResolverSobreposicoesCAR())

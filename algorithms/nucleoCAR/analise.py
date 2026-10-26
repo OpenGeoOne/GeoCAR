@@ -128,6 +128,11 @@ def executar(p):
     # --- 4b. Comparação com as parcelas certificadas no SIGEF ---
     sigef = comparar_sigef(perimetro, area_imovel, src, p.get("sigef"))
 
+    # --- 4c. Desmatamento depois de 22/07/2008 (PRODES/INPE) ---
+    from .desmatamento import analisar_desmatamento
+    desmatamento = analisar_desmatamento(perimetro, src, p.get("prodes"), consolidada, res_app["app_integral"],
+                                         p.get("reservas") or [], vegetacao)
+
     # Tipos de Reserva Legal declarados (para a lista de documentos)
     rl_tipos = set()
     for camada in p.get("reservas") or []:
@@ -158,6 +163,15 @@ def executar(p):
             adicionar_feicao(c_sig, item["geometria"], [item["tipo"], item["codigo"], item["matricula"],
                                                         round(item["area_ha"], 4)])
         camadas.append(c_sig)
+
+    if desmatamento is not None:
+        c_des = criar_camada_memoria("Desmatamento após 2008", "MultiPolygon", src,
+                                     [("tipo", "string"), ("ano", "integer"), ("data_imagem", "string"),
+                                      ("area_ha", "double")])
+        for item in desmatamento["itens"]:
+            adicionar_feicao(c_des, item["geometria"], [item["tipo"], item["ano"], item["data"],
+                                                        round(item["area_ha"], 4)])
+        camadas.append(c_des)
 
     # --- 6. Relatório ---
     resumo = {
@@ -195,6 +209,7 @@ def executar(p):
         },
         "restricoes_proximas": _restricoes_proximas(p["restricoes"], perimetro, src),
         "sigef": sigef,
+        "desmatamento": desmatamento,
         "rl": res_rl,
     }
 

@@ -201,6 +201,31 @@ def _plano_acao(r):
                 recompor.append(f"As parcelas certificadas do imóvel têm {h(sg['fora_ati_ha'])} ha fora da ATI: a ATI "
                                 f"está menor que o imóvel certificado; conferir se deve seguir o perímetro do SIGEF.")
 
+    # Desmatamento depois de 22/07/2008 (PRODES)
+    ds = r.get("desmatamento")
+    if ds is not None and ds["poligonos"]:
+        anos = ", ".join(str(a) for a in ds["anos"]) or "ano não informado"
+        if ds["consolidada_ha"] > 0.0001:
+            bloqueia.append(f"{h(ds['consolidada_ha'])} ha de área consolidada declarada sobre desmatamento detectado "
+                            f"pelo PRODES depois de 22/07/2008 ({anos}): área desmatada depois dessa data não é "
+                            f"consolidada (art. 3º, IV). Retire-a da área consolidada ou comprove, com imagens da "
+                            f"época, que o uso é anterior a 22/07/2008.")
+        if ds["rl_ha"] > 0.0001:
+            recompor.append(f"Reserva Legal desmatada depois de 22/07/2008 ({h(ds['rl_ha'])} ha): suspender "
+                            f"imediatamente as atividades na área e recompor a RL (art. 17, §§ 3º e 4º).")
+        if ds["app_ha"] > 0.0001:
+            recompor.append(f"APP desmatada depois de 22/07/2008 ({h(ds['app_ha'])} ha): recompor integralmente, sem a "
+                            f"escadinha do art. 61-A (art. 7º, § 1º); sem isso, ficam vedadas novas autorizações de "
+                            f"supressão (art. 7º, § 3º).")
+        if ds["apos_ha"] > 0.0001:
+            recompor.append(f"{h(ds['apos_ha'])} ha desmatados depois de 22/07/2008 dentro da ATI ({anos}): conferir se "
+                            f"houve autorização de supressão (art. 26). Sem ela, a área fica sujeita a embargo e "
+                            f"autuação, e não tem os benefícios do PRA, que valem só para infrações anteriores a "
+                            f"22/07/2008 (art. 59, § 4º).")
+        if ds["confirmar_ha"] > 0.0001:
+            atencao.append(f"{h(ds['confirmar_ha'])} ha de desmatamento detectado em 2008, em imagem posterior a "
+                           f"22/07/2008: conferir com imagens de julho de 2008 se é anterior ou posterior ao marco.")
+
     # Atenção
     if apas:
         nomes = "; ".join(s["identificador"].split(":", 1)[-1].strip() for s in apas)
@@ -246,6 +271,10 @@ def _plano_acao(r):
             any("Embargo" in (s["identificador"] or "") for s in r["sobreposicoes"]):
         documentos.append("Certidão negativa de embargos do IBAMA (e do ICMBio), consultada pelo CPF/CNPJ do "
                           "proprietário — o plugin não guarda dados pessoais dos embargos.")
+
+    if ds is not None and ds["poligonos"]:
+        documentos.append("Autorização de supressão de vegetação (ASV) das áreas desmatadas depois de 22/07/2008, ou "
+                          "imagens de satélite que comprovem o uso anterior a essa data.")
 
     # HTML
     partes = ["<h2>O que corrigir</h2>"]
@@ -424,6 +453,33 @@ def gerar_relatorio_html(r, caminho):
                 ["Imóvel", "Matrícula", "Código", "Área (ha)", "Distância da ATI (m)"],
                 [[v["nome"], v["matricula"], v["codigo"], _n(v["area_parcela_ha"]), _n(v["distancia_m"], 0)]
                  for v in sg["vizinhas"]], colunas_num=(3, 4)))
+
+    # Desmatamento depois de 22/07/2008 (PRODES)
+    ds = r.get("desmatamento")
+    if ds is not None:
+        partes.append("<h2>8. Desmatamento depois de 22/07/2008 (PRODES/INPE)</h2>")
+        if not ds["poligonos"]:
+            partes.append("<p class='ok'>O PRODES não registra desmatamento depois de 22/07/2008 dentro da ATI.</p>")
+        else:
+            partes.append(_tabela(
+                ["Ano", "Data da imagem", "Período", "Na ATI (ha)", "Em área consolidada (ha)", "Em APP (ha)",
+                 "Em RL (ha)", "Hoje vegetação nativa (ha)"],
+                [[str(x["ano"] or "-"), x["data"] or "-", x["periodo"], _n(x["area_ha"]), _n(x["consolidada_ha"]),
+                  _n(x["app_ha"]), _n(x["rl_ha"]), _n(x["vegetacao_ha"])] for x in ds["poligonos"]],
+                colunas_num=(3, 4, 5, 6, 7)))
+        partes.append(f"<p>Desmatamento anterior a 22/07/2008 dentro da ATI: {_n(ds['antes_ha'])} ha (pode ser área "
+                      f"consolidada, se o uso for comprovado).</p>")
+        mata = (" No bioma Mata Atlântica vale também a Lei nº 11.428/2006, que restringe a supressão conforme o "
+                "estágio da vegetação." if "Mata Atlântica" in ds["biomas"] else "")
+        partes.append("<p class='aviso'><b>Fundamento:</b> Lei nº 12.651/2012, art. 3º, IV (área rural consolidada é "
+                      "a ocupação preexistente a 22/07/2008); art. 7º, §§ 1º e 3º (recomposição de APP suprimida e "
+                      "vedação de novas autorizações); art. 17, §§ 3º e 4º (suspensão e recomposição da RL desmatada "
+                      "irregularmente); art. 26 (supressão depende de autorização); art. 59, § 4º (benefícios do PRA "
+                      "só para infrações anteriores a 22/07/2008)." + mata + "</p>")
+        partes.append("<p class='nota'>Fonte: PRODES/INPE (TerraBrasilis), imagens Landsat de 30 m, com área mínima "
+                      "de cerca de 1 ha. A ausência de polígono não prova que não houve supressão: confira com imagens "
+                      "históricas. Desmatamento detectado em 2008 fica a confirmar, pois pode ser anterior ou "
+                      "posterior a 22/07/2008.</p>")
 
     partes.append(
         "<p class='nota'>Pré-análise técnica automatizada, de caráter indicativo. Não substitui "
