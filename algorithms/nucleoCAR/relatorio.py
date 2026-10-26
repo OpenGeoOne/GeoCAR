@@ -406,6 +406,12 @@ def gerar_relatorio_html(r, caminho):
                 colunas_num=(3, 4, 5)))
         partes.append(f"<p>ATI sem parcela certificada: {_n(sg['sem_certificacao_ha'])} ha · "
                       f"parcelas do imóvel fora da ATI: {_n(sg['fora_ati_ha'])} ha.</p>")
+        if sg.get("vizinhas"):
+            partes.append("<p><b>Imóveis certificados vizinhos</b> (não tocam a ATI):</p>")
+            partes.append(_tabela(
+                ["Imóvel", "Matrícula", "Código", "Área (ha)", "Distância da ATI (m)"],
+                [[v["nome"], v["matricula"], v["codigo"], _n(v["area_parcela_ha"]), _n(v["distancia_m"], 0)]
+                 for v in sg["vizinhas"]], colunas_num=(3, 4)))
 
     partes.append(
         "<p class='nota'>Pré-análise técnica automatizada, de caráter indicativo. Não substitui "

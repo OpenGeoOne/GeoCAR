@@ -37,15 +37,19 @@ def comparar_sigef(perimetro, area_imovel_ha, src, camadas):
     camadas = [c for c in camadas or [] if c is not None]
     if not camadas:
         return None
-    parcelas, geoms_todas, geoms_imovel = [], [], []
+    parcelas, vizinhas, geoms_todas, geoms_imovel = [], [], [], []
     for camada in camadas:
-        for _fid, atributos, geom in feicoes_no_src(camada, src, perimetro.boundingBox()):
+        for _fid, atributos, geom in feicoes_no_src(camada, src):
             if geom is None or geom.isEmpty():
                 continue
             geom = geom.makeValid()
             dentro = recortar(geom, perimetro)
             area_dentro = area_ha(dentro)
             if area_dentro <= AREA_MINIMA_HA:
+                # Imóvel certificado vizinho (confrontante ou próximo), que não toca a ATI
+                vizinhas.append({"codigo": _valor(atributos, "codigo_imovel") or _valor(atributos, "parcela"),
+                                 "nome": _valor(atributos, "nome_area"), "matricula": _valor(atributos, "matricula"),
+                                 "area_parcela_ha": area_ha(geom), "distancia_m": geom.distance(perimetro)})
                 continue
             area_parcela = area_ha(geom)
             fracao = area_dentro / area_parcela if area_parcela else 0.0
@@ -94,5 +98,6 @@ def comparar_sigef(perimetro, area_imovel_ha, src, camadas):
         "sem_certificacao_ha": area_ha(sem_certificacao),
         "fora_ati_ha": area_ha(fora_ati) if fora_ati is not None else 0.0,
         "matriculas": matriculas,
+        "vizinhas": sorted(vizinhas, key=lambda v: v["distancia_m"]),
         "itens": itens,
     }

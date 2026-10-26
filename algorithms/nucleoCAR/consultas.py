@@ -23,7 +23,7 @@ NOME_RESTRICOES = 'Restricoes_Territoriais'
 MARGEM_RESTRICOES_M = 2000.0
 PROPRIEDADE_CONSULTA = 'geocar/consulta'   # data da última consulta, guardada na camada (salva no projeto)
 MARGEM_VIZINHOS_M = 1000.0
-MARGEM_SIGEF_M = 500.0
+MARGEM_SIGEF_M = 1000.0   # mesma margem dos CARs vizinhos: traz também os imóveis certificados vizinhos
 
 
 def _camadaDoResultado(contexto, saida):
