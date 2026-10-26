@@ -293,6 +293,12 @@ class ReservaLegalRelatorioCAR(QgsProcessingAlgorithm):
         for observacao in rl['observacoes']:
             feedback.pushWarning(observacao)
         feedback.pushInfo(self.tr(f'Relatório gravado em: {caminhoHtml}'))
+        # Assinatura das camadas analisadas: o grupo 5 avisa se elas mudarem depois desta pré-análise
+        try:
+            from .nucleoCAR.conferencia_envio import gravarAssinatura
+            gravarAssinatura(context.project())
+        except Exception as erro:
+            feedback.pushWarning(self.tr(f'Assinatura da pré-análise não gravada: {erro}'))
         feedback.pushInfo(self.tr('GeoCAR - GeoOne'))
 
         return {

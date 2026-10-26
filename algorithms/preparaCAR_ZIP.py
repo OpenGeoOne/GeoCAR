@@ -39,6 +39,7 @@ from qgis.PyQt.QtGui import QIcon
 import os
 
 from .utilsExportacao import SEM_ERRO, camadaDeReferencia, camadasParaExportar, exportarCamada
+from .nucleoCAR.conferencia_envio import conferirAntesDeExportar
 import zipfile
 
 class preparaCAR_ZIP(QgsProcessingAlgorithm):
@@ -80,6 +81,8 @@ A ferramenta percorre todas as camadas vetoriais do projeto e exporta apenas aqu
 São gerados arquivos <b>.ZIP</b> contendo os componentes do Shapefile (.shp, .shx, .dbf, .prj, .cpg), prontos para envio ao sistema do CAR.
 
 <b>Camadas exportadas:</b> somente as da estrutura RAIZ (arquivos GeoCAR*.gpkg ou, na RAIZ de Goiás, a pasta da camada ATI). Camadas temporárias, a Consulta CAR, camadas de apoio e resultados da pré-análise ficam de fora, seja qual for o nome.
+
+<b>Conferência antes do envio:</b> antes de exportar, a ferramenta avisa o que pode fazer o CAR ser devolvido: ATI vazia ou com geometria inválida, Sede fora da ATI, camadas com edição não salva, pendências da última pré-análise e camadas alteradas depois dela. Os arquivos são gerados assim mesmo.
 """
 
         footer = '''<div>
@@ -111,6 +114,9 @@ São gerados arquivos <b>.ZIP</b> contendo os componentes do Shapefile (.shp, .s
 
     def processAlgorithm(self, parameters, context, feedback):
         output_folder = self.parameterAsString(parameters, self.OUTPUT_FOLDER, context)
+
+        # Conferência antes do envio: só avisa, não impede a exportação
+        conferirAntesDeExportar(feedback, context.project())
 
         # Defina o diretório de exportação
         caminho = output_folder
