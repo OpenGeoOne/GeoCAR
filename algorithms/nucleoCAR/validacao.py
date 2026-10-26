@@ -29,6 +29,17 @@ def vertices_duplicados(geometria, tolerancia=TOLERANCIA_VERTICE_M):
     return pontos
 
 
+def grupos_duplicados(pontos, tolerancia=TOLERANCIA_VERTICE_M):
+    """Junta os vértices repetidos no mesmo local: lista de (ponto, quantas cópias a mais)."""
+    grupos = []
+    for ponto in pontos:
+        if grupos and grupos[-1][0].distance(ponto) < tolerancia:
+            grupos[-1][1] += 1
+        else:
+            grupos.append([ponto, 1])
+    return [(p, n) for p, n in grupos]
+
+
 def contar_vertices_duplicados(geometria, tolerancia=TOLERANCIA_VERTICE_M):
     """Conta vértices consecutivos coincidentes (dentro da tolerância, em metros)."""
     return len(vertices_duplicados(geometria, tolerancia))
@@ -65,12 +76,13 @@ def validar_perimetro(camada, src_trabalho):
                 "ponto": ponto,
             })
 
-        # Um ponto em cada vértice duplicado, para achar o local no mapa
-        for ponto in pontosDuplicados:
+        # Um ponto em cada local com vértice repetido, para achar no mapa
+        for ponto, copias in grupos_duplicados(pontosDuplicados):
             problemas.append({
                 "feicao": fid,
                 "tipo": "Vértices duplicados",
-                "descricao": f"Vértice repetido em sequência ({duplicados} na feição): apague um deles.",
+                "descricao": (f"{copias + 1} vértices no mesmo lugar, em sequência: apague "
+                              f"{'um deles' if copias == 1 else f'{copias} deles'}."),
                 "ponto": ponto,
             })
 
