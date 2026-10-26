@@ -319,6 +319,11 @@ def gerar_relatorio_html(r, caminho):
         ["Parcelas na camada", r["n_parcelas"]],
         ["SRC de cálculo", r["src"]],
     ], colunas_num=(1,)))
+    if r.get("quadro"):
+        partes.append("<h3>Quadro de áreas (para preencher e conferir o SICAR)</h3>")
+        partes.append(_tabela(["Grupo", "Item", "Área (ha)", "Observação"],
+                              [[q["grupo"], q["item"], "" if q["area_ha"] is None else _n(q["area_ha"]), q["obs"]]
+                               for q in r["quadro"]], colunas_num=(2,)))
 
     # Validação
     partes.append("<h2>2. Validação geométrica</h2>")

@@ -133,6 +133,12 @@ def executar(p):
     desmatamento = analisar_desmatamento(perimetro, src, p.get("prodes"), consolidada, res_app["app_integral"],
                                          p.get("reservas") or [], vegetacao)
 
+    # --- 4d. Quadro de áreas (para preencher e conferir o SICAR) ---
+    from .quadro_areas import calcular_quadro
+    quadro = calcular_quadro(perimetro, src, area_imovel, n_modulos, p["modulo_fiscal_ha"], vegetacao,
+                             p.get("coberturas") or [], p.get("servidoes") or [], p.get("reservas") or [],
+                             p.get("outras") or [], res_app, res_rl, recompor_real)
+
     # Tipos de Reserva Legal declarados (para a lista de documentos)
     rl_tipos = set()
     for camada in p.get("reservas") or []:
@@ -210,6 +216,7 @@ def executar(p):
         "restricoes_proximas": _restricoes_proximas(p["restricoes"], perimetro, src),
         "sigef": sigef,
         "desmatamento": desmatamento,
+        "quadro": quadro,
         "rl": res_rl,
     }
 

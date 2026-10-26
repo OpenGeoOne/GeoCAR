@@ -212,6 +212,13 @@ class ReservaLegalRelatorioCAR(QgsProcessingAlgorithm):
         self.addOutput(QgsProcessingOutputNumber(self.OUTPUT_DEFICIT_SEM_APP,
                                                  self.tr('Déficit de RL sem cômputo da APP (ha)')))
 
+    @staticmethod
+    def _camadasDeclaradas():
+        """Camadas da RAIZ de APP de relevo, vereda, manguezal e uso restrito, para o quadro de áreas."""
+        from .nucleoCAR.quadro_areas import classificar_camada
+        from .utilsExportacao import camadasParaExportar
+        return [c for c in camadasParaExportar() if classificar_camada(c.name()) and c.featureCount() > 0]
+
     def processAlgorithm(self, parameters, context, feedback):
         camadaAti = self.parameterAsVectorLayer(parameters, self.INPUT_ATI, context)
         if camadaAti is None or camadaAti.featureCount() == 0:
@@ -263,6 +270,7 @@ class ReservaLegalRelatorioCAR(QgsProcessingAlgorithm):
                           if isinstance(c, QgsVectorLayer)],
             'sigef': [c for c in [camadaSigef] if c is not None],
             'prodes': [c for c in [camadaProdes] if c is not None],
+            'outras': self._camadasDeclaradas(),
             'caminho_relatorio': caminhoHtml,
             'identificacao': {rotulo: self.parameterAsString(parameters, chave, context).strip()
                               for chave, rotulo in self.IDENTIFICACAO},
@@ -305,6 +313,19 @@ class ReservaLegalRelatorioCAR(QgsProcessingAlgorithm):
         for observacao in rl['observacoes']:
             feedback.pushWarning(observacao)
         feedback.pushInfo(self.tr(f'Relatório gravado em: {caminhoHtml}'))
+        # Quadro de áreas também em planilha, ao lado do relatório
+        if resumo.get('quadro'):
+            from datetime import date
+            from .nucleoCAR.quadro_areas import gravar_csv
+            caminhoCsv = os.path.join(os.path.dirname(caminhoHtml),
+                                      f'GeoCAR_Quadro_de_Areas_{date.today().isoformat()}.csv')
+            try:
+                gravar_csv(resumo['quadro'], caminhoCsv,
+                           [(k, v) for k, v in (resumo.get('identificacao') or {}).items() if v]
+                           + [('Gerado em', resumo['data'])])
+                feedback.pushInfo(self.tr(f'Quadro de áreas: {caminhoCsv}'))
+            except OSError as erro:
+                feedback.pushWarning(self.tr(f'Quadro de áreas não gravado: {erro}'))
         # Assinatura das camadas analisadas: o grupo 5 avisa se elas mudarem depois desta pré-análise
         try:
             from .nucleoCAR.conferencia_envio import gravarAssinatura
