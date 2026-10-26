@@ -15,7 +15,10 @@ from datetime import date, datetime
 from html import escape
 
 from qgis.PyQt.QtCore import QMetaType
-from qgis.core import (QgsFeature, QgsField, QgsProject, QgsVectorFileWriter, QgsVectorLayer)
+from uuid import uuid4
+
+from qgis.core import (Qgis, QgsFeature, QgsField, QgsMessageLog, QgsProject, QgsVectorFileWriter,
+                       QgsVectorLayer)
 
 from .processingCAR import ARQUIVO_FIXO, PASTA_RESULTADOS, projetoSalvo
 
@@ -24,7 +27,7 @@ CAMPOS = [('data_hora', QMetaType.Type.QString), ('ferramenta', QMetaType.Type.Q
           ('camada', QMetaType.Type.QString), ('feicao', QMetaType.Type.QString),
           ('tipo', QMetaType.Type.QString), ('detalhe', QMetaType.Type.QString),
           ('quantidade', QMetaType.Type.Double), ('unidade', QMetaType.Type.QString),
-          ('gravacao', QMetaType.Type.QString)]
+          ('gravacao', QMetaType.Type.QString), ('lote', QMetaType.Type.QString)]
 
 LEI = "Lei nº 12.651/2012"
 DECRETO = "Decreto nº 7.830/2012"
@@ -114,6 +117,11 @@ for _tipo, (_secao, _f, _l) in TIPOS.items():
 
 # Registro em memória quando o projeto não está salvo (não há onde gravar)
 _registroTemporario = []
+# Camadas com correções em edição: id da camada -> {'camada', 'lotes', 'slots'}
+_vigiadas = {}
+
+GRAVACAO_SALVA = 'salva'
+GRAVACAO_EDICAO = 'em edição (conferir e salvar)'
 
 
 def entrada(ferramenta, camada, feicao, tipo, detalhe, quantidade=None, unidade=''):
@@ -123,6 +131,11 @@ def entrada(ferramenta, camada, feicao, tipo, detalhe, quantidade=None, unidade=
 
 def _caminhoGpkg(projeto):
     return os.path.join(projeto.homePath(), PASTA_RESULTADOS, ARQUIVO_FIXO)
+
+
+def _caminhoPdf(projeto):
+    return os.path.join(projeto.homePath(), PASTA_RESULTADOS,
+                        f'GeoCAR_Correcoes_Pre-Analise_{date.today().isoformat()}.pdf')
 
 
 def _tabela(projeto, criar=False):
@@ -142,20 +155,31 @@ def _tabela(projeto, criar=False):
                                        else QgsVectorFileWriter.ActionOnExistingFile.CreateOrOverwriteFile)
         QgsVectorFileWriter.writeAsVectorFormatV3(memoria, caminho, projeto.transformContext(), opcoes)
         camada = QgsVectorLayer(f'{caminho}|layername={TABELA}', TABELA, 'ogr')
-    return camada if camada is not None and camada.isValid() else None
+    if camada is None or not camada.isValid():
+        return None
+    # Tabelas criadas antes do campo 'lote'
+    faltam = [QgsField(n, t) for n, t in CAMPOS if camada.fields().indexFromName(n) < 0]
+    if faltam:
+        camada.dataProvider().addAttributes(faltam)
+        camada.updateFields()
+    return camada
 
 
 def registrar(entradas, salvo, feedback, projeto=None, contexto=None):
     """
     Grava as entradas no registro e refaz o relatório das correções. 'salvo': se as alterações foram gravadas
-    ou ficaram em edição. Retorna o caminho do PDF (ou None, com o projeto não salvo).
+    ou ficaram em edição; em edição, o registro acompanha a camada: ao salvar, a correção passa a "salva"; ao
+    descartar, sai do registro. Retorna o caminho do PDF (ou None, com o projeto não salvo).
     """
     projeto = projeto or QgsProject.instance()
     if not entradas:
         return None
     agora = datetime.now().strftime('%d/%m/%Y %H:%M')
-    gravacao = 'salva' if salvo else 'em edição (conferir e salvar)'
-    linhas = [dict(e, data_hora=agora, gravacao=gravacao) for e in entradas]
+    lote = uuid4().hex[:12]
+    linhas = [dict(e, data_hora=agora, gravacao=GRAVACAO_SALVA if salvo else GRAVACAO_EDICAO, lote=lote)
+              for e in entradas]
+    if not salvo:
+        _vigiar(projeto, lote, {e['camada'] for e in entradas})
     if not projetoSalvo(projeto):
         _registroTemporario.extend(linhas)
         feedback.pushInfo('Projeto não salvo: o registro das correções fica só nesta sessão (sem PDF).')
@@ -176,6 +200,92 @@ def registrar(entradas, salvo, feedback, projeto=None, contexto=None):
     if caminho:
         feedback.pushInfo(f'Relatório das correções: {caminho}')
     return caminho
+
+
+def _vigiar(projeto, lote, nomes):
+    """Liga a camada em edição ao registro: salvar confirma a correção, descartar a remove."""
+    for nome in nomes:
+        for camada in projeto.mapLayersByName(nome):
+            if not isinstance(camada, QgsVectorLayer) or not camada.isEditable():
+                continue
+            info = _vigiadas.get(camada.id())
+            if info is None:
+                aoSalvar = lambda c=camada: _finalizar(c, True)
+                aoDescartar = lambda c=camada: _finalizar(c, False)
+                camada.afterCommitChanges.connect(aoSalvar)
+                camada.afterRollBack.connect(aoDescartar)
+                info = {'camada': camada, 'lotes': set(), 'slots': (aoSalvar, aoDescartar)}
+                _vigiadas[camada.id()] = info
+            info['lotes'].add(lote)
+
+
+def _desligar(camada):
+    info = _vigiadas.pop(camada.id(), None)
+    if info is not None:
+        aoSalvar, aoDescartar = info['slots']
+        for sinal, slot in ((camada.afterCommitChanges, aoSalvar), (camada.afterRollBack, aoDescartar)):
+            try:
+                sinal.disconnect(slot)
+            except (TypeError, RuntimeError):
+                pass
+    return info
+
+
+def _finalizar(camada, salva):
+    """Camada salva ou descartada: atualiza o registro das correções dela e refaz o PDF."""
+    info = _desligar(camada)
+    if info is None:
+        return
+    try:
+        nome, lotes = camada.name(), info['lotes']
+        doLote = lambda lote, nomeCamada: lote in lotes and nomeCamada == nome
+        if salva:
+            for linha in _registroTemporario:
+                if doLote(linha.get('lote'), linha.get('camada')):
+                    linha['gravacao'] = GRAVACAO_SALVA
+        else:
+            _registroTemporario[:] = [l for l in _registroTemporario if not doLote(l.get('lote'), l.get('camada'))]
+        projeto = QgsProject.instance()
+        if not projetoSalvo(projeto):
+            return
+        tabela = _tabela(projeto)
+        if tabela is None:
+            return
+        alvo = [f.id() for f in tabela.getFeatures()
+                if doLote(f['lote'], f['camada']) and f['gravacao'] != GRAVACAO_SALVA]
+        if not alvo:
+            return
+        if salva:
+            indice = tabela.fields().indexFromName('gravacao')
+            tabela.dataProvider().changeAttributeValues({fid: {indice: GRAVACAO_SALVA} for fid in alvo})
+            acao = 'confirmada(s): a camada foi salva'
+        else:
+            tabela.dataProvider().deleteFeatures(alvo)
+            acao = 'retirada(s) do registro: as edições foram descartadas'
+        if lerRegistro(projeto):
+            gerarRelatorio(projeto)
+        elif os.path.exists(_caminhoPdf(projeto)):
+            os.remove(_caminhoPdf(projeto))
+        QgsMessageLog.logMessage(f'{nome}: {len(alvo)} correção(ões) {acao}. Relatório das correções atualizado.',
+                                 'GeoCAR', Qgis.MessageLevel.Info)
+    except Exception as erro:   # o registro nunca deve atrapalhar o salvar/descartar da camada
+        QgsMessageLog.logMessage(f'Registro das correções: {erro}', 'GeoCAR', Qgis.MessageLevel.Warning)
+
+
+def limparHistorico(projeto=None):
+    """Apaga o histórico de correções do projeto e o relatório do dia. Retorna quantas linhas apagou."""
+    projeto = projeto or QgsProject.instance()
+    _registroTemporario.clear()
+    tabela = _tabela(projeto)
+    total = 0
+    if tabela is not None:
+        ids = [f.id() for f in tabela.getFeatures()]
+        total = len(ids)
+        if ids:
+            tabela.dataProvider().deleteFeatures(ids)
+    if projetoSalvo(projeto) and os.path.exists(_caminhoPdf(projeto)):
+        os.remove(_caminhoPdf(projeto))
+    return total
 
 
 def lerRegistro(projeto=None):
@@ -231,8 +341,7 @@ def gerarRelatorio(projeto=None):
     registros = lerRegistro(projeto)
     if not registros:
         return None
-    caminho = os.path.join(projeto.homePath(), PASTA_RESULTADOS,
-                           f'GeoCAR_Correcoes_Pre-Analise_{date.today().isoformat()}.pdf')
+    caminho = _caminhoPdf(projeto)
     porSecao = {}
     for r in registros:
         secao = TIPOS.get(r['tipo'], ('Outras correções', '', ''))[0]
@@ -282,8 +391,8 @@ def gerarRelatorio(projeto=None):
         p.append("</table>")
 
     p.append("<h2>Observações</h2><ul>"
-             "<li>Correções marcadas como <b>em edição</b> só valem depois de salvas na camada; se foram descartadas, "
-             "desconsidere-as.</li>"
+             "<li>Correções marcadas como <b>em edição</b> ainda não foram salvas na camada: ao salvar, passam a "
+             "<b>salva</b>; ao descartar, saem deste relatório.</li>"
              "<li>Depois das correções, rode de novo a pré-análise (grupo 3) para confirmar que as pendências "
              "sumiram.</li>"
              "<li>Sobreposições com imóveis vizinhos, Unidades de Conservação, Terras Indígenas, assentamentos e "

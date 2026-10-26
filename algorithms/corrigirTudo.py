@@ -63,6 +63,7 @@ class CorrigirTudoCAR(QgsProcessingAlgorithm):
     AREA_MAXIMA = 'AREA_MAXIMA'
     SALVAR = 'SALVAR'
     REFAZER_PREANALISE = 'REFAZER_PREANALISE'
+    LIMPAR_HISTORICO = 'LIMPAR_HISTORICO'
 
     PRIORIDADES = ['Vegetação nativa > área consolidada > pousio',
                    'Área consolidada > vegetação nativa > pousio']
@@ -104,6 +105,9 @@ class CorrigirTudoCAR(QgsProcessingAlgorithm):
         self.addParameter(QgsProcessingParameterBoolean(
             self.REFAZER_PREANALISE, self.tr('No fim, refazer a pré-análise (3c) para conferir as pendências'),
             defaultValue=True))
+        self.addParameter(QgsProcessingParameterBoolean(
+            self.LIMPAR_HISTORICO, self.tr('Começar histórico novo (apaga o registro das correções anteriores)'),
+            defaultValue=False))
 
     def processAlgorithm(self, parameters, context, feedback):
         import processing   # importado aqui: o provider carrega antes do Processing estar pronto
@@ -161,6 +165,11 @@ class CorrigirTudoCAR(QgsProcessingAlgorithm):
                            {'INPUT_ATI': camadaAti}))
         if not etapas:
             raise QgsProcessingException(self.tr('Nenhuma etapa marcada.'))
+
+        if self.parameterAsBool(parameters, self.LIMPAR_HISTORICO, context):
+            from .nucleoCAR.registro_correcoes import limparHistorico
+            apagadas = limparHistorico(context.project())
+            feedback.pushInfo(self.tr(f'Histórico de correções apagado ({apagadas} registro(s)).'))
 
         passos = QgsProcessingMultiStepFeedback(len(etapas), feedback)
         resultados = {}
@@ -223,5 +232,7 @@ Use as ferramentas separadas (b a f) para corrigir só um tipo de erro ou ajusta
 <b>Segurança:</b> as correções ficam no <b>modo de edição</b>, sem salvar; confira no mapa e salve ou descarte (Ctrl+Z desfaz). Marque <b>Salvar as alterações</b> para gravar direto.
 
 Cada correção fica registrada no <b>Pre-Analise/GeoCAR_Correcoes_Pre-Analise_&lt;data&gt;.pdf</b>, com o fundamento legal. No fim, a pré-análise (3c) é refeita para conferir se as pendências sumiram.
+
+O registro acompanha as camadas: ao <b>salvar</b> a edição, a correção passa a "salva" no relatório; ao <b>descartar</b>, ela sai do relatório. Marque <b>Começar histórico novo</b> só quando o projeto foi reaproveitado de outro imóvel.
 """ + avisoLegal()
         return txt + rodapeAjuda()

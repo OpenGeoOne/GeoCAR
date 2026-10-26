@@ -60,7 +60,8 @@ AVISO_EDICAO = ('<b>Segurança:</b> as correções ficam no <b>modo de edição<
                 'e salve ou descarte as edições (Ctrl+Z desfaz). Marque <b>Salvar as alterações</b> para gravar direto. '
                 'Depois, rode a pré-análise de novo para confirmar que a pendência sumiu.<br><br>'
                 'Cada correção fica registrada, e o relatório <b>Pre-Analise/GeoCAR_Correcoes_Pre-Analise_&lt;data&gt;.pdf</b> '
-                'é refeito com o fundamento legal (Lei 12.651/2012 e Decreto 7.830/2012).')
+                'é refeito com o fundamento legal (Lei 12.651/2012 e Decreto 7.830/2012). Ao salvar a edição, a correção '
+                'passa a "salva" no relatório; ao descartar, sai dele.')
 LIMITE_REPETICOES = 10000   # trava de segurança na remoção vértice a vértice
 
 
