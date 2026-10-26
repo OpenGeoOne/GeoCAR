@@ -49,6 +49,7 @@ CANDIDATOS = {
     'nascentes': ['Nascente_50m', 'NASCENTE', 'Nascente_ou_Olho_de_Agua_Perene'],
     'lagos': ['Lago_Lagoa_Natural_50m', 'LAGO_LAGOA_NATURAL', 'LAGOA_NATURAL', 'Lago_ou_Lagoa_Natural'],
     'restricoes': ['CAR_Vizinhos_SICAR', 'Restricoes_Territoriais'],
+    'sigef': ['Parcelas_SIGEF'],
     # Consistência entre camadas (3d): outras coberturas do solo, Reserva Legal e servidão administrativa
     'coberturas': ['Area_Consolidada', 'AREA_CONSOLIDADA', 'AC', 'Area_Pousio', 'Pousio', 'POUSIO'],
     'reservas': ['RL_Proposta', 'RL_Averbada', 'RL_Aprovada_Nao_Averbada', 'RL_Vinculada_Outro_Imovel',
@@ -93,6 +94,9 @@ CAMPOS_SICAR = [('cod_imovel', _S), ('status_imovel', _S), ('dat_criacao', _DT),
                 ('m_fiscal', _D), ('tipo_imovel', _S)]
 CAMADAS_FIXAS = {
     'CAR_Vizinhos_SICAR': ('MultiPolygon', CAMPOS_SICAR),
+    'Parcelas_SIGEF': ('MultiPolygon', [('parcela', _S), ('codigo_imovel', _S), ('nome_area', _S), ('matricula', _S),
+                                        ('situacao', _S), ('aprovacao', _S), ('fonte', _S), ('consulta', _S)]),
+    'Divergencias_SIGEF': ('MultiPolygon', [('tipo', _S), ('codigo', _S), ('matricula', _S), ('area_ha', _D)]),
     'Restricoes_Territoriais': ('MultiPolygon', [('tipo', _S), ('nome', _S), ('codigo', _S), ('situacao', _S),
                                                  ('data', _S), ('fonte', _S), ('consulta', _S)]),
     'Area_Consolidada': ('MultiPolygon', [('observacao', _S)]),
@@ -108,15 +112,16 @@ CAMADAS_FIXAS = {
                                             ('descricao', _S)]),
 }
 GRUPOS_FIXOS = [
-    ('Areas_Vizinhas', ['CAR_Vizinhos_SICAR', 'Restricoes_Territoriais']),
+    ('Areas_Vizinhas', ['CAR_Vizinhos_SICAR', 'Restricoes_Territoriais', 'Parcelas_SIGEF']),
     ('Apoio à Pré-Análise', ['Area_Consolidada']),
-    (GRUPO_RESULTADOS_FIXO, ['Problemas_Validacao', 'Sobreposicoes', 'Inconsistencias']),
+    (GRUPO_RESULTADOS_FIXO, ['Problemas_Validacao', 'Sobreposicoes', 'Inconsistencias', 'Divergencias_SIGEF']),
     # Subgrupo com as camadas da APP hídrica (ferramenta b)
     (GRUPO_RESULTADOS_FIXO + '/' + SUBGRUPO_APP, ['APP_Integral', 'Faixa_Escadinha', 'APP_Recompor_Consolidada',
                                                   'Uso_Consolidado_em_APP', 'APP_Fora_Consolidada']),
 ]
 ESTILOS_FIXOS = {
     'CAR_Vizinhos_SICAR': {'color': '0,0,0,0', 'outline_color': '255,255,0', 'outline_width': '0.6'},
+    'Parcelas_SIGEF': {'color': '0,0,0,0', 'outline_color': '0,180,220', 'outline_width': '0.7', 'outline_style': 'dot'},
     'Restricoes_Territoriais': {'color': '255,0,255,40', 'outline_color': '200,0,200', 'outline_width': '0.6',
                                 'outline_style': 'dash'},
     'Area_Consolidada': {'color': '230,200,120,110', 'outline_color': '180,140,60', 'outline_width': '0.4'},
@@ -380,7 +385,18 @@ class PosProcessamentoGrupo(QgsProcessingLayerPostProcessorInterface):
 
 
 def aplicarEstilo(camada):
-    """Sobreposições por classe (relevante em vermelho, ajuste de divisa em laranja); inconsistências por gravidade."""
+    """Sobreposições por classe (relevante em vermelho, ajuste de divisa em laranja); inconsistências por gravidade;
+    divergências com o SIGEF por tipo."""
+    if camada.name() == 'Divergencias_SIGEF' or (camada.fields().indexFromName('matricula') >= 0
+                                                 and camada.fields().indexFromName('area_ha') >= 0):
+        cores = [('Parcela de terceiro dentro da ATI', '220,0,0,150', '150,0,0'),
+                 ('ATI sem parcela certificada', '255,140,0,120', '200,100,0'),
+                 ('Parcela do imóvel fora da ATI', '0,150,220,110', '0,100,170'),
+                 ('Ajuste de divisa com parcela certificada', '255,200,0,140', '200,150,0')]
+        camada.setRenderer(QgsCategorizedSymbolRenderer('tipo', [
+            QgsRendererCategory(v, QgsFillSymbol.createSimple({'color': cor, 'outline_color': borda, 'outline_width': '0.5'}), v)
+            for v, cor, borda in cores]))
+        return
     if camada.fields().indexFromName('gravidade') >= 0:
         camada.setRenderer(QgsCategorizedSymbolRenderer('gravidade', [
             QgsRendererCategory('Erro', QgsFillSymbol.createSimple(

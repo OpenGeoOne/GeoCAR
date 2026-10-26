@@ -79,6 +79,7 @@ class ReservaLegalRelatorioCAR(QgsProcessingAlgorithm):
     INPUT_COBERTURAS = 'INPUT_COBERTURAS'
     INPUT_RESERVAS = 'INPUT_RESERVAS'
     INPUT_SERVIDOES = 'INPUT_SERVIDOES'
+    INPUT_SIGEF = 'INPUT_SIGEF'
     IMOVEL = 'IMOVEL'
     MUNICIPIO_UF = 'MUNICIPIO_UF'
     PROPRIETARIO = 'PROPRIETARIO'
@@ -102,6 +103,7 @@ class ReservaLegalRelatorioCAR(QgsProcessingAlgorithm):
         'Uso consolidado mantido em APP': 'Uso_Consolidado_em_APP',
         'APP fora de área consolidada': 'APP_Fora_Consolidada',
         'Inconsistências': 'Inconsistencias',
+        'Divergências SIGEF': 'Divergencias_SIGEF',
     }
 
     OUTPUT_RL_EXIGIDA = 'OUTPUT_RL_EXIGIDA'
@@ -176,6 +178,11 @@ class ReservaLegalRelatorioCAR(QgsProcessingAlgorithm):
                 defaultValue=camadasPadrao(candidatos) or None)
             parametro.setFlags(parametro.flags() | Qgis.ProcessingParameterFlag.Advanced)
             self.addParameter(parametro)
+        parametro = QgsProcessingParameterVectorLayer(
+            self.INPUT_SIGEF, self.tr('Parcelas certificadas no SIGEF (comparação com a ATI)'), [poligono],
+            optional=True, defaultValue=camadaPadrao('sigef'))
+        parametro.setFlags(parametro.flags() | Qgis.ProcessingParameterFlag.Advanced)
+        self.addParameter(parametro)
         self.addParameter(QgsProcessingParameterFileDestination(
             self.OUTPUT_HTML, self.tr('Relatório de pré-análise (PDF ou HTML)'),
             fileFilter='PDF (*.pdf);;HTML (*.html)',
@@ -230,6 +237,7 @@ class ReservaLegalRelatorioCAR(QgsProcessingAlgorithm):
                          if isinstance(c, QgsVectorLayer)],
             'servidoes': [c for c in self.parameterAsLayerList(parameters, self.INPUT_SERVIDOES, context)
                           if isinstance(c, QgsVectorLayer)],
+            'sigef': [c for c in [self.parameterAsVectorLayer(parameters, self.INPUT_SIGEF, context)] if c is not None],
             'caminho_relatorio': caminhoHtml,
             'identificacao': {rotulo: self.parameterAsString(parameters, chave, context).strip()
                               for chave, rotulo in self.IDENTIFICACAO},
@@ -317,8 +325,9 @@ class ReservaLegalRelatorioCAR(QgsProcessingAlgorithm):
 • consistência entre camadas (coberturas do solo, Reserva Legal e servidões — parâmetros avançados)
 • APP hídrica integral, faixa da escadinha e teto do art. 61-B
 • Reserva Legal
+• comparação com as parcelas certificadas no SIGEF (camada Parcelas_SIGEF, da ferramenta 1c): parcela de terceiro dentro da ATI, várias matrículas, área sem certificação — parâmetro avançado
 
-A <b>primeira página</b> do relatório é o resumo <b>O que corrigir</b>, montado a partir dos resultados: o que resolver antes de enviar, ajustes pequenos, o que recompor e conferir, e restrições próximas para ficar atento.
+A <b>primeira página</b> do relatório é o resumo <b>O que corrigir</b>, montado a partir dos resultados: o que resolver antes de enviar, ajustes pequenos, o que recompor e conferir, restrições próximas para ficar atento e os <b>documentos a reunir</b> para cada pendência.
 
 A opção <b>Gerar também as camadas de resultado</b> preenche as mesmas camadas das ferramentas <b>a</b>, <b>b</b> e <b>d</b>. Ela já vem marcada e grava nas camadas do grupo <b>Resultados da Pré-Análise</b>, no <b>Pre-Analise/PreAnalise.gpkg</b> do projeto (criado na primeira execução, se ainda não existir), apagando os resultados anteriores. O relatório fica na pasta <b>Pre-Analise/</b>. As entradas já vêm preenchidas com as camadas da RAIZ.
 

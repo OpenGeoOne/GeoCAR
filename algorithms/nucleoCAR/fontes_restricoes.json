@@ -1,5 +1,5 @@
 {
-  "_comentario": "Endereços dos serviços oficiais usados pela ferramenta 1c. Se um endereço mudar, basta editar este arquivo. servico: wfs_cnuc (WFS do MMA, escolhe a camada CNUC mais recente), wfs ou arcgis (FeatureServer/MapServer do ArcGIS). campos: candidatos, na ordem; o primeiro preenchido é usado. alternativas: usadas só se o serviço principal falhar.",
+  "_comentario": "Endereços dos serviços oficiais usados pela ferramenta 1c. Se um endereço mudar, basta editar este arquivo. servico: wfs_cnuc (WFS do MMA, escolhe a camada CNUC mais recente), wfs ou arcgis (FeatureServer/MapServer do ArcGIS). campos: candidatos, na ordem; o primeiro preenchido é usado. alternativas: usadas só se o serviço principal falhar. sigef: parcelas certificadas privadas, gravadas à parte (camada Parcelas_SIGEF).",
   "fontes": [
     {
       "tipo": "Unidade de Conservação",
@@ -7,12 +7,64 @@
       "url": "https://geoservicos.inde.gov.br/geoserver/MMA/ows",
       "prefixo": "MMA:cnuc_",
       "fonte": "MMA — CNUC",
-      "campos": {"nome": ["nome_uc"], "codigo": ["cd_cnuc", "uc_id"], "situacao": ["grupo", "categoria", "esfera"], "data": ["cria_ano"]},
+      "campos": {
+        "nome": [
+          "nome_uc"
+        ],
+        "codigo": [
+          "cd_cnuc",
+          "uc_id"
+        ],
+        "situacao": [
+          "grupo",
+          "categoria",
+          "esfera"
+        ],
+        "data": [
+          "cria_ano"
+        ]
+      },
       "alternativas": [
-        {"servico": "arcgis", "url": "https://pamgia.ibama.gov.br/server/rest/services/01_Publicacoes_Bases/lim_unidade_conservacao_a/FeatureServer/13",
-         "fonte": "ICMBio (via IBAMA)", "campos": {"nome": ["nome"], "codigo": ["codigocnuc"], "situacao": ["siglagrupo"], "data": ["anocriacao"]}},
-        {"servico": "arcgis", "url": "https://pamgia.ibama.gov.br/server/rest/services/01_Publicacoes_Bases/lim_unidade_conservacao_est_a/FeatureServer/14",
-         "fonte": "SFB (via IBAMA)", "campos": {"nome": ["nome"], "codigo": ["codigo"], "situacao": ["protecao", "categoria"], "data": ["anocriacao", "ano"]}}
+        {
+          "servico": "arcgis",
+          "url": "https://pamgia.ibama.gov.br/server/rest/services/01_Publicacoes_Bases/lim_unidade_conservacao_a/FeatureServer/13",
+          "fonte": "ICMBio (via IBAMA)",
+          "campos": {
+            "nome": [
+              "nome"
+            ],
+            "codigo": [
+              "codigocnuc"
+            ],
+            "situacao": [
+              "siglagrupo"
+            ],
+            "data": [
+              "anocriacao"
+            ]
+          }
+        },
+        {
+          "servico": "arcgis",
+          "url": "https://pamgia.ibama.gov.br/server/rest/services/01_Publicacoes_Bases/lim_unidade_conservacao_est_a/FeatureServer/14",
+          "fonte": "SFB (via IBAMA)",
+          "campos": {
+            "nome": [
+              "nome"
+            ],
+            "codigo": [
+              "codigo"
+            ],
+            "situacao": [
+              "protecao",
+              "categoria"
+            ],
+            "data": [
+              "anocriacao",
+              "ano"
+            ]
+          }
+        }
       ]
     },
     {
@@ -20,35 +72,177 @@
       "servico": "arcgis",
       "url": "https://pamgia.ibama.gov.br/server/rest/services/01_Publicacoes_Bases/lim_terra_indigena_a/FeatureServer/12",
       "fonte": "FUNAI (via IBAMA)",
-      "campos": {"nome": ["terrai_nom"], "codigo": ["terrai_cod"], "situacao": ["fase_ti", "modalidade"], "data": []}
+      "campos": {
+        "nome": [
+          "terrai_nom"
+        ],
+        "codigo": [
+          "terrai_cod"
+        ],
+        "situacao": [
+          "fase_ti",
+          "modalidade"
+        ],
+        "data": []
+      }
     },
     {
       "tipo": "Assentamento (INCRA)",
       "servico": "arcgis",
       "url": "https://pamgia.ibama.gov.br/server/rest/services/01_Publicacoes_Bases/assentamentos_incra/FeatureServer/1",
       "fonte": "INCRA (via IBAMA)",
-      "campos": {"nome": ["nome_proje"], "codigo": ["cd_sipra"], "situacao": ["fase"], "data": ["data_de_cr"]}
+      "campos": {
+        "nome": [
+          "nome_proje"
+        ],
+        "codigo": [
+          "cd_sipra"
+        ],
+        "situacao": [
+          "fase"
+        ],
+        "data": [
+          "data_de_cr"
+        ]
+      }
     },
     {
       "tipo": "Embargo IBAMA",
       "servico": "arcgis",
       "url": "https://pamgia.ibama.gov.br/server/rest/services/01_Publicacoes_Bases/adm_embargos_ibama_a/FeatureServer/0",
       "fonte": "IBAMA",
-      "campos": {"nome": ["num_tad"], "codigo": ["serie_tad"], "situacao": ["sit_desmatamento", "tipo_area"], "data": ["dat_embargo"]}
+      "campos": {
+        "nome": [
+          "num_tad"
+        ],
+        "codigo": [
+          "serie_tad"
+        ],
+        "situacao": [
+          "sit_desmatamento",
+          "tipo_area"
+        ],
+        "data": [
+          "dat_embargo"
+        ]
+      }
     },
     {
       "tipo": "Embargo ICMBio",
       "servico": "arcgis",
       "url": "https://pamgia.ibama.gov.br/server/rest/services/01_Publicacoes_Bases/adm_embargo_icmbio_a/FeatureServer/0",
       "fonte": "ICMBio (via IBAMA)",
-      "campos": {"nome": ["numero_ai"], "codigo": ["serie"], "situacao": ["tipo_infra", "nome_uc"], "data": ["data_embar", "dt_embargo"]}
+      "campos": {
+        "nome": [
+          "numero_ai"
+        ],
+        "codigo": [
+          "serie"
+        ],
+        "situacao": [
+          "tipo_infra",
+          "nome_uc"
+        ],
+        "data": [
+          "data_embar",
+          "dt_embargo"
+        ]
+      }
     },
     {
       "tipo": "Floresta Pública (SFB)",
       "servico": "arcgis",
       "url": "https://pamgia.ibama.gov.br/server/rest/services/01_Publicacoes_Bases/lim_floresta_publica_a/FeatureServer/8",
       "fonte": "SFB (via IBAMA)",
-      "campos": {"nome": ["nome"], "codigo": ["codigo"], "situacao": ["classe", "categoria"], "data": ["anocriacao", "ano"]}
+      "campos": {
+        "nome": [
+          "nome"
+        ],
+        "codigo": [
+          "codigo"
+        ],
+        "situacao": [
+          "classe",
+          "categoria"
+        ],
+        "data": [
+          "anocriacao",
+          "ano"
+        ]
+      }
+    },
+    {
+      "tipo": "Gleba pública federal (SIGEF)",
+      "servico": "arcgis",
+      "url": "https://pamgia.ibama.gov.br/server/rest/services/01_Publicacoes_Bases/lim_imovel_sigef_publico_a/FeatureServer/10",
+      "fonte": "INCRA — SIGEF público (via IBAMA)",
+      "campos": {
+        "nome": [
+          "nome_area"
+        ],
+        "codigo": [
+          "codigo_imo",
+          "parcela_co"
+        ],
+        "situacao": [
+          "situacao_i",
+          "status"
+        ],
+        "data": [
+          "data_aprov"
+        ]
+      }
+    },
+    {
+      "tipo": "Terra pública não destinada",
+      "servico": "arcgis",
+      "url": "https://pamgia.ibama.gov.br/server/rest/services/01_Publicacoes_Bases/lim_area_nao_destinada_a/FeatureServer/6",
+      "fonte": "SFB (via IBAMA)",
+      "campos": {
+        "nome": [
+          "nome"
+        ],
+        "codigo": [
+          "codigo"
+        ],
+        "situacao": [
+          "classe",
+          "categoria",
+          "orgao"
+        ],
+        "data": [
+          "anocriacao",
+          "ano"
+        ]
+      }
+    },
+    {
+      "tipo": "Área militar",
+      "servico": "arcgis",
+      "url": "https://pamgia.ibama.gov.br/server/rest/services/01_Publicacoes_Bases/lim_uso_militar_a/FeatureServer/15",
+      "fonte": "SFB (via IBAMA)",
+      "campos": {
+        "nome": [
+          "nome"
+        ],
+        "codigo": [
+          "codigo"
+        ],
+        "situacao": [
+          "classe",
+          "categoria",
+          "orgao"
+        ],
+        "data": [
+          "anocriacao",
+          "ano"
+        ]
+      }
     }
-  ]
+  ],
+  "sigef": {
+    "url": "https://pamgia.ibama.gov.br/server/rest/services/01_Publicacoes_Bases/lim_imovel_sigef_privado_a/FeatureServer/9",
+    "fonte": "INCRA — SIGEF (via IBAMA)",
+    "_comentario": "Parcelas certificadas (imóveis privados): vão para a camada Parcelas_SIGEF e são comparadas com a ATI na ferramenta 3c."
+  }
 }

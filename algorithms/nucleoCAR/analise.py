@@ -15,6 +15,7 @@ from . import app as modulo_app
 from .relatorio import gerar_relatorio_html
 from .reserva_legal import calcular_rl
 from .consistencia import verificar_consistencia
+from .sigef import comparar_sigef
 from .sobreposicao import LARGURA_DIVISA_PADRAO, PERC_DIVISA_PADRAO, analisar_sobreposicoes
 from .utils import (adicionar_feicao, area_ha, criar_camada_memoria, feicoes_no_src, recortar, src_utm_sirgas,
                     subtrair, uniao)
@@ -124,6 +125,20 @@ def executar(p):
     else:
         res_rl["declarada_ha"] = None   # camadas de RL não informadas: não dá para dizer se falta declarar
 
+    # --- 4b. Comparação com as parcelas certificadas no SIGEF ---
+    sigef = comparar_sigef(perimetro, area_imovel, src, p.get("sigef"))
+
+    # Tipos de Reserva Legal declarados (para a lista de documentos)
+    rl_tipos = set()
+    for camada in p.get("reservas") or []:
+        if camada.featureCount() > 0:
+            nome = camada.name().lower()
+            if "averb" in nome:
+                rl_tipos.add("averbada")
+            if "vincul" in nome or "condomin" in nome or "crae" in nome or "compens" in nome:
+                rl_tipos.add("outro_imovel")
+    res_rl["tipos_declarados"] = sorted(rl_tipos)
+
     # --- 5. Camadas de resultado ---
     camadas = _criar_camadas(src, perimetro, area_imovel, n_modulos, problemas,
                              sobreposicoes, res_app)
@@ -135,6 +150,14 @@ def executar(p):
             adicionar_feicao(c_inc, item["geometria"], [item["gravidade"], item["tipo"], item["camadas"],
                                                         round(item["area_ha"], 4), item["descricao"]])
         camadas.append(c_inc)
+    if sigef is not None:
+        c_sig = criar_camada_memoria("Divergências SIGEF", "MultiPolygon", src,
+                                     [("tipo", "string"), ("codigo", "string"), ("matricula", "string"),
+                                      ("area_ha", "double")])
+        for item in sigef["itens"]:
+            adicionar_feicao(c_sig, item["geometria"], [item["tipo"], item["codigo"], item["matricula"],
+                                                        round(item["area_ha"], 4)])
+        camadas.append(c_sig)
 
     # --- 6. Relatório ---
     resumo = {
@@ -171,6 +194,7 @@ def executar(p):
             "tem_vegetacao": vegetacao is not None and not vegetacao.isEmpty(),
         },
         "restricoes_proximas": _restricoes_proximas(p["restricoes"], perimetro, src),
+        "sigef": sigef,
         "rl": res_rl,
     }
 

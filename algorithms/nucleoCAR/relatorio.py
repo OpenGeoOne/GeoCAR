@@ -162,6 +162,37 @@ def _plano_acao(r):
         recompor.append(f"Conferir na tabela do INCRA o módulo fiscal ({h(r['modulo_fiscal_ha'])} ha), obtido dos "
                         f"CARs vizinhos.")
 
+    # Comparação com o SIGEF (titularidade)
+    sg = r.get("sigef")
+    if sg is not None:
+        doImovel = [x for x in sg["parcelas"] if x["classe"] == "Parcela do imóvel"]
+        for x in sg["parcelas"]:
+            ref = ", ".join(v for v in (x["nome"], f"matrícula {x['matricula']}" if x["matricula"] else "",
+                                        f"código {x['codigo']}" if x["codigo"] else "") if v)
+            if x["classe"] == "Parcela de terceiro dentro da ATI":
+                bloqueia.append(f"A ATI avança {h(x['area_na_ati_ha'])} ha sobre a parcela certificada no SIGEF ({ref}), "
+                                f"que é de outro imóvel: retificar a ATI ou comprovar a titularidade.")
+        divisas_sigef = [x for x in sg["parcelas"] if x["classe"] == "Ajuste de divisa com parcela certificada"]
+        if divisas_sigef:
+            ajustes.append(f"{len(divisas_sigef)} faixa(s) estreita(s) entre a ATI e parcelas certificadas no SIGEF "
+                           f"({h(sum(x['area_na_ati_ha'] for x in divisas_sigef))} ha): ajustar a ATI ao limite "
+                           f"certificado, que é o mais preciso.")
+        if not doImovel:
+            recompor.append("Nenhuma parcela certificada no SIGEF coincide com a ATI: conferir se o imóvel já foi "
+                            "georreferenciado e certificado (obrigatório em desmembramentos e transferências, "
+                            "conforme o tamanho do imóvel).")
+        else:
+            if len(sg["matriculas"]) > 1:
+                recompor.append(f"A ATI reúne {len(sg['matriculas'])} parcelas certificadas "
+                                f"({', '.join(sg['matriculas'])}): conferir se todas são do mesmo titular, "
+                                f"condição para um único CAR.")
+            if sg["sem_certificacao_ha"] > 0.01 * r["area_imovel_ha"]:
+                recompor.append(f"{h(sg['sem_certificacao_ha'])} ha da ATI sem parcela certificada no SIGEF: "
+                                f"posse sem título ou georreferenciamento pendente; conferir os documentos dessa área.")
+            if sg["fora_ati_ha"] > 0.01 * r["area_imovel_ha"]:
+                recompor.append(f"As parcelas certificadas do imóvel têm {h(sg['fora_ati_ha'])} ha fora da ATI: a ATI "
+                                f"está menor que o imóvel certificado; conferir se deve seguir o perímetro do SIGEF.")
+
     # Atenção
     if apas:
         nomes = "; ".join(s["identificador"].split(":", 1)[-1].strip() for s in apas)
@@ -176,6 +207,38 @@ def _plano_acao(r):
         nota = " (provável zona de amortecimento; pesa em licenciamento)" if p["tipo"].startswith("Unidade") else ""
         atencao.append(f"{p['tipo']} a {_n(p['distancia_m'] / 1000.0, 1)} km: {p['nome']}{nota}. Não toca o imóvel.")
 
+    # Documentos a reunir, conforme as pendências encontradas
+    documentos = ["Documento de propriedade ou posse do imóvel e CPF/CNPJ do proprietário ou possuidor; "
+                  "procuração, se o cadastro for feito por terceiro."]
+    if any(":" not in (s["identificador"] or "") for s in relevantes) or (sg and any(
+            x["classe"] == "Parcela de terceiro dentro da ATI" for x in sg["parcelas"])):
+        documentos.append("Certidão de inteiro teor atualizada da matrícula, memorial descritivo e certificação do "
+                          "SIGEF, CCIR e contrato de compra e venda ou formal de partilha, se houve venda ou herança.")
+    if any(":" in (s["identificador"] or "") for s in relevantes):
+        documentos.append("Declaração ou certidão do órgão responsável pela área sobreposta (ICMBio ou órgão "
+                          "estadual, FUNAI, INCRA, SFB) sobre a situação do imóvel.")
+    if sg is not None and len(sg["matriculas"]) > 1:
+        documentos.append("Certidões de todas as matrículas reunidas na ATI, comprovando o mesmo titular.")
+    if sg is not None and (not [x for x in sg["parcelas"] if x["classe"] == "Parcela do imóvel"]
+                           or sg["sem_certificacao_ha"] > 0.01 * r["area_imovel_ha"]):
+        documentos.append("Título ou documento de posse da área sem certificação e, se já houver, ART e memorial do "
+                          "georreferenciamento.")
+    if a["tem_consolidada"]:
+        documentos.append("Comprovação do uso anterior a 22/07/2008 na área consolidada: imagens de satélite da época, "
+                          "declarações de ITR antigas, notas fiscais de produção, financiamentos rurais.")
+    tipos_rl = rl.get("tipos_declarados") or []
+    if "averbada" in tipos_rl:
+        documentos.append("Certidão da matrícula com a averbação da Reserva Legal.")
+    if "outro_imovel" in tipos_rl:
+        documentos.append("Instrumento que vincula a Reserva Legal em outro imóvel (servidão ambiental, CRA, "
+                          "condomínio ou termo do órgão ambiental).")
+    if rl["deficit_com_app_ha"] > 0.0001 and r["n_modulos"] > 4:
+        documentos.append("Proposta de recomposição, regeneração ou compensação da Reserva Legal para o PRA.")
+    if any("mbargo" in (p["tipo"] or "") for p in r.get("restricoes_proximas") or []) or \
+            any("Embargo" in (s["identificador"] or "") for s in r["sobreposicoes"]):
+        documentos.append("Certidão negativa de embargos do IBAMA (e do ICMBio), consultada pelo CPF/CNPJ do "
+                          "proprietário — o plugin não guarda dados pessoais dos embargos.")
+
     # HTML
     partes = ["<h2>O que corrigir</h2>"]
     if bloqueia:
@@ -186,6 +249,7 @@ def _plano_acao(r):
                           ("Recompor e conferir", recompor), ("Ficar atento", atencao)):
         if itens:
             partes.append(f"<h3>{titulo}</h3><ul>" + "".join(f"<li>{escape(i)}</li>" for i in itens) + "</ul>")
+    partes.append("<h3>Documentos a reunir</h3><ul>" + "".join(f"<li>{escape(d)}</li>" for d in documentos) + "</ul>")
     return "".join(partes)
 
 
@@ -327,6 +391,21 @@ def gerar_relatorio_html(r, caminho):
             partes.append(_tabela(["Gravidade", "Tipo", "Camadas", "Área (ha)"],
                                   [[i["gravidade"], i["tipo"], i["camadas"], _n(i["area_ha"])] for i in itens],
                                   colunas_num=(3,)))
+
+    # Comparação com o SIGEF
+    sg = r.get("sigef")
+    if sg is not None:
+        partes.append("<h2>7. Comparação com o SIGEF</h2>")
+        if not sg["parcelas"]:
+            partes.append("<p class='alerta'>Nenhuma parcela certificada no SIGEF toca a ATI.</p>")
+        else:
+            partes.append(_tabela(
+                ["Parcela", "Matrícula", "Classe", "Área da parcela (ha)", "Na ATI (ha)", "% da parcela na ATI"],
+                [[x["nome"] or x["codigo"], x["matricula"], x["classe"], _n(x["area_parcela_ha"]),
+                  _n(x["area_na_ati_ha"]), _n(x["perc_parcela"], 1)] for x in sg["parcelas"]],
+                colunas_num=(3, 4, 5)))
+        partes.append(f"<p>ATI sem parcela certificada: {_n(sg['sem_certificacao_ha'])} ha · "
+                      f"parcelas do imóvel fora da ATI: {_n(sg['fora_ati_ha'])} ha.</p>")
 
     partes.append(
         "<p class='nota'>Pré-análise técnica automatizada, de caráter indicativo. Não substitui "
