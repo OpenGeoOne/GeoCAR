@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Rascunho de Reserva Legal (ferramenta 4e).
+Rascunho de Reserva Legal (ferramenta 4f).
 
 Escolhe, sobre a vegetação nativa, a área que falta para a RL exigida (art. 12), descontada a RL já declarada:
 1. vegetação nativa fora de APP, servidão e RL declarada;

@@ -73,7 +73,7 @@ def _plano_acao(r):
         tipos = sorted({x["tipo"] for x in r["problemas"]})
         bloqueia.append(f"Corrigir {len(r['problemas'])} problema(s) geométrico(s): {', '.join(tipos)} "
                         f"(camada Problemas_Validacao)."
-                        + (" Use a ferramenta 4a (Corrigir geometria da ATI)." if {"Vértices duplicados", "Geometria inválida", "Vértices muito próximos", "Agulha",
+                        + (" Use a ferramenta 4b (Corrigir geometria da ATI)." if {"Vértices duplicados", "Geometria inválida", "Vértices muito próximos", "Agulha",
                                    "Sobreposição entre parcelas"} & set(tipos) else ""))
 
     # Sobreposições
@@ -101,15 +101,15 @@ def _plano_acao(r):
     for i in r.get("consistencia") or []:
         texto = f"{i['tipo']} ({i['camadas']}): {h(i['area_ha'])} ha."
         if i["gravidade"] == "Erro":
-            dica = (" Use a ferramenta 4b (Recortar camadas pela ATI)." if i["tipo"].startswith("Fora da ATI") else
-                    " Use a ferramenta 4c (Resolver sobreposições entre camadas)."
+            dica = (" Use a ferramenta 4c (Recortar camadas pela ATI)." if i["tipo"].startswith("Fora da ATI") else
+                    " Use a ferramenta 4d (Resolver sobreposições entre camadas)."
                     if i["tipo"].startswith(("Sobreposição entre", "Servidão administrativa sobre")) else "")
             bloqueia.append(texto + " Corrigir as camadas declaradas." + dica)
         elif i["tipo"].startswith("Reserva Legal sem vegetação"):
             recompor.append(f"Reserva Legal sem vegetação nativa: {h(i['area_ha'])} ha a recompor (PRA).")
         elif i["tipo"].startswith("Área sem cobertura"):
             ajustes.append(f"{h(i['area_ha'])} ha da ATI sem cobertura do solo declarada: classificar essas áreas em "
-                           f"vegetação nativa, área consolidada ou pousio. Use a ferramenta 4d (Preencher lascas sem "
+                           f"vegetação nativa, área consolidada ou pousio. Use a ferramenta 4e (Preencher lascas sem "
                            f"cobertura) para juntar as lascas pequenas (até 500 m²) à cobertura vizinha.")
         else:
             ajustes.append(texto)
@@ -124,11 +124,11 @@ def _plano_acao(r):
                 f"há só {h(rl['vegetacao_fora_app_ha'])} ha de vegetação nativa fora de APP")
         if declarada <= 0.0001:
             bloqueia.append(f"Reserva Legal não declarada: a exigida é de {h(rl['exigida_ha'])} ha "
-                            f"({_n(rl['percentual'], 0)}%); {base}. A ferramenta 4e (Rascunho de Reserva Legal) "
+                            f"({_n(rl['percentual'], 0)}%); {base}. A ferramenta 4f (Rascunho de Reserva Legal) "
                             f"desenha uma proposta para ajustar.")
         else:
             bloqueia.append(f"Reserva Legal declarada ({h(declarada)} ha) menor que a exigida "
-                            f"({h(rl['exigida_ha'])} ha); {base}. A ferramenta 4e (Rascunho de Reserva Legal) "
+                            f"({h(rl['exigida_ha'])} ha); {base}. A ferramenta 4f (Rascunho de Reserva Legal) "
                             f"desenha o que falta.")
     if rl["deficit_com_app_ha"] > 0.0001:
         if r["n_modulos"] <= 4:
@@ -253,6 +253,10 @@ def _plano_acao(r):
         partes.append(f"<p class='alerta'>{len(bloqueia)} pendência(s) a resolver antes do envio ao CAR.</p>")
     else:
         partes.append("<p class='ok'>Nenhuma pendência impede o envio ao CAR.</p>")
+    if any("ferramenta 4" in i for i in bloqueia + ajustes):
+        partes.append("<p>As correções automáticas indicadas (ferramentas 4b a 4e) podem ser feitas de uma vez com a "
+                      "<b>4a. Corrigir tudo</b>, que registra cada uma, com o fundamento legal, no relatório das "
+                      "correções.</p>")
     for titulo, itens in (("Resolver antes de enviar", bloqueia), ("Ajustes pequenos", ajustes),
                           ("Recompor e conferir", recompor), ("Ficar atento", atencao)):
         if itens:

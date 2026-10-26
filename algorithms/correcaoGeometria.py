@@ -147,7 +147,7 @@ class CorrigirGeometriaAtiCAR(_BaseCorrecao):
         ligou = editar(camada)
         corrigidas = set()
         entradas = []
-        ferramenta = '4a'
+        ferramenta = '4b'
 
         # 1. Vértices e validade, feição por feição
         for feicao in camada.getFeatures():
@@ -222,7 +222,7 @@ class CorrigirGeometriaAtiCAR(_BaseCorrecao):
         return 'corrigirgeometriaaticar'
 
     def displayName(self):
-        return self.tr('a. Corrigir geometria da ATI')
+        return self.tr('b. Corrigir geometria da ATI')
 
     def createInstance(self):
         return CorrigirGeometriaAtiCAR()
@@ -287,13 +287,13 @@ class RecortarPelaAtiCAR(_BaseCorrecao):
                     camada.deleteFeature(feicao.id())
                     feedback.pushInfo(self.tr(f'{camada.name()}, feição {feicao.id()}: inteira fora da ATI '
                                               f'({fora.area() / 10000.0:.4f} ha) — excluída.'))
-                    entradas.append(entrada('4b', camada.name(), feicao.id(), 'fora_ati',
+                    entradas.append(entrada('4c', camada.name(), feicao.id(), 'fora_ati',
                                             'feição inteira fora da ATI excluída', fora.area(), 'm²'))
                 else:
                     camada.changeGeometry(feicao.id(), ajustarTipo(conversor.paraCamada(dentro), camada))
                     feedback.pushInfo(self.tr(f'{camada.name()}, feição {feicao.id()}: {fora.area() / 10000.0:.4f} ha '
                                               f'fora da ATI recortados.'))
-                    entradas.append(entrada('4b', camada.name(), feicao.id(), 'fora_ati',
+                    entradas.append(entrada('4c', camada.name(), feicao.id(), 'fora_ati',
                                             'parte fora da ATI recortada', fora.area(), 'm²'))
                 alterou = True
             finalizar(camada, ligou, alterou, salvar)
@@ -307,7 +307,7 @@ class RecortarPelaAtiCAR(_BaseCorrecao):
         return 'recortarpelaaticar'
 
     def displayName(self):
-        return self.tr('b. Recortar camadas pela ATI')
+        return self.tr('c. Recortar camadas pela ATI')
 
     def createInstance(self):
         return RecortarPelaAtiCAR()
@@ -404,7 +404,7 @@ class ResolverSobreposicoesCAR(_BaseCorrecao):
             sobreServidao = feicoes[fid].intersection(servidao)
             areaServidao = 0.0 if sobreServidao.isEmpty() else sobreServidao.area()
             if areaServidao >= AREA_MINIMA_M2:
-                entradas.append(entrada('4c', camada.name(), fid, 'servidao_rl',
+                entradas.append(entrada('4d', camada.name(), fid, 'servidao_rl',
                                         'parte sobre servidão administrativa retirada da RL', areaServidao, 'm²'))
             area -= areaServidao
             if area < AREA_MINIMA_M2:
@@ -412,7 +412,7 @@ class ResolverSobreposicoesCAR(_BaseCorrecao):
             detalhe = 'parte sobre RL de maior prioridade retirada'
         else:
             detalhe = 'parte sobre cobertura de maior prioridade retirada'
-        entradas.append(entrada('4c', camada.name(), fid, tipo, detalhe, area, 'm²'))
+        entradas.append(entrada('4d', camada.name(), fid, tipo, detalhe, area, 'm²'))
 
     def processAlgorithm(self, parameters, context, feedback):
         camadaAti = self.camadaAti(parameters, context)
@@ -451,7 +451,7 @@ class ResolverSobreposicoesCAR(_BaseCorrecao):
         return 'resolversobreposicoescar'
 
     def displayName(self):
-        return self.tr('c. Resolver sobreposições entre camadas')
+        return self.tr('d. Resolver sobreposições entre camadas')
 
     def createInstance(self):
         return ResolverSobreposicoesCAR()
@@ -543,7 +543,7 @@ class PreencherLascasCAR(_BaseCorrecao):
             alteradas[(melhor[0].id(), melhor[1])] = melhor
             preenchidaHa += lasca.area() / 10000.0
             feedback.pushInfo(self.tr(f'Lasca de {lasca.area():.1f} m² juntada a {melhor[0].name()} (feição {melhor[1]}).'))
-            entradas.append(entrada('4d', melhor[0].name(), melhor[1], 'lasca', 'lasca sem cobertura juntada à feição',
+            entradas.append(entrada('4e', melhor[0].name(), melhor[1], 'lasca', 'lasca sem cobertura juntada à feição',
                                     lasca.area(), 'm²'))
 
         salvar = self.parameterAsBool(parameters, self.SALVAR, context)
@@ -570,7 +570,7 @@ class PreencherLascasCAR(_BaseCorrecao):
         return 'preencherlascascar'
 
     def displayName(self):
-        return self.tr('d. Preencher lascas sem cobertura')
+        return self.tr('e. Preencher lascas sem cobertura')
 
     def createInstance(self):
         return PreencherLascasCAR()
@@ -580,7 +580,7 @@ class PreencherLascasCAR(_BaseCorrecao):
 
 Cada lasca até a área máxima (padrão de 500 m²) vai para a feição de cobertura com a maior divisa em comum com ela. Áreas maiores não são preenchidas: são uso de verdade e precisam ser classificadas manualmente. A servidão administrativa conta como área ocupada.
 
-Rode depois da <b>c. Resolver sobreposições entre camadas</b>, para as lascas serem medidas já sem sobreposição.
+Rode depois da <b>d. Resolver sobreposições entre camadas</b>, para as lascas serem medidas já sem sobreposição.
 
 {AVISO_EDICAO}
 """ + avisoLegal()

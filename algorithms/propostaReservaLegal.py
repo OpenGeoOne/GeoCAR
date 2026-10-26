@@ -159,12 +159,12 @@ class PropostaReservaLegalCAR(QgsProcessingAlgorithm):
             feedback.pushInfo(self.tr(f'{NOME_RASCUNHO}: {len(novas)} feição(ões) gravada(s) (o rascunho anterior '
                                       'foi apagado).'))
 
-        entradas = [entrada('4e', NOME_RASCUNHO, i + 1, 'rascunho_rl', f'{origem} (RL exigida de {percentual:g}%: '
+        entradas = [entrada('4f', NOME_RASCUNHO, i + 1, 'rascunho_rl', f'{origem} (RL exigida de {percentual:g}%: '
                                                                       f'{res["exigida_ha"]:.4f} ha)'.replace('.', ','),
                             geometria.area() / 1e4, 'ha')
                     for i, (origem, geometria) in enumerate(res['partes'])]
         if res['deficit_ha'] > 0:
-            entradas.append(entrada('4e', NOME_RASCUNHO, '-', 'deficit_rl', 'RL sem vegetação nativa disponível',
+            entradas.append(entrada('4f', NOME_RASCUNHO, '-', 'deficit_rl', 'RL sem vegetação nativa disponível',
                                     res['deficit_ha'], 'ha'))
         registrar(entradas, fixa is not None, feedback, context.project())
 
@@ -189,7 +189,7 @@ class PropostaReservaLegalCAR(QgsProcessingAlgorithm):
         return 'propostareservalegalcar'
 
     def displayName(self):
-        return self.tr('e. Rascunho de Reserva Legal')
+        return self.tr('f. Rascunho de Reserva Legal')
 
     def group(self):
         return self.tr('4. 🔧 Correções')
