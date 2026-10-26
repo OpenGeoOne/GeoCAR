@@ -53,6 +53,7 @@ from .nucleoCAR.correcoes import Conversor, srcDaAti, uniaoAti, uniaoUtm
 from .nucleoCAR.processingCAR import (avisoLegal, camadaFixa, camadaPadrao, camadasPadrao, garantirCamadaFixa,
                                       limparCamada, projetoSalvo, rodapeAjuda, substituirFeicoes)
 from .nucleoCAR.proposta_rl import propor_rl
+from .nucleoCAR.registro_correcoes import entrada, registrar
 from .nucleoCAR.reserva_legal import OPCOES_PERCENTUAL
 
 NOME_RASCUNHO = 'RL_Rascunho'
@@ -158,6 +159,15 @@ class PropostaReservaLegalCAR(QgsProcessingAlgorithm):
             feedback.pushInfo(self.tr(f'{NOME_RASCUNHO}: {len(novas)} feição(ões) gravada(s) (o rascunho anterior '
                                       'foi apagado).'))
 
+        entradas = [entrada('4e', NOME_RASCUNHO, i + 1, 'rascunho_rl', f'{origem} (RL exigida de {percentual:g}%: '
+                                                                      f'{res["exigida_ha"]:.4f} ha)'.replace('.', ','),
+                            geometria.area() / 1e4, 'ha')
+                    for i, (origem, geometria) in enumerate(res['partes'])]
+        if res['deficit_ha'] > 0:
+            entradas.append(entrada('4e', NOME_RASCUNHO, '-', 'deficit_rl', 'RL sem vegetação nativa disponível',
+                                    res['deficit_ha'], 'ha'))
+        registrar(entradas, fixa is not None, feedback, context.project())
+
         resultados = {self.OUTPUT_PROPOSTA: round(res['proposta_ha'], 4),
                       self.OUTPUT_DEFICIT: round(res['deficit_ha'], 4)}
         if parameters.get(self.OUTPUT) is not None or fixa is None:
@@ -211,5 +221,7 @@ class PropostaReservaLegalCAR(QgsProcessingAlgorithm):
 O resultado vai para a camada <b>RL_Rascunho</b> (grupo <b>Apoio à Pré-Análise</b>), com a origem de cada parte. Rode depois da pré-análise do grupo 3, que gera a <b>APP_Integral</b>.
 
 <b>É um ponto de partida:</b> a localização da RL é escolha do proprietário, aprovada pelo órgão ambiental (art. 14), que considera plano de bacia, zoneamento, corredores e áreas frágeis. Ajuste o desenho e copie para a camada de RL proposta da RAIZ.
+
+O rascunho entra no relatório das correções (<b>Pre-Analise/GeoCAR_Correcoes_Pre-Analise_&lt;data&gt;.pdf</b>), com os arts. 12, 14, 15, 66 e 67 da Lei 12.651/2012.
 """ + avisoLegal()
         return txt + rodapeAjuda()

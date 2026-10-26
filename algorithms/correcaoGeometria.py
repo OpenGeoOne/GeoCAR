@@ -50,6 +50,7 @@ from .nucleoCAR.correcoes import (AREA_MINIMA_M2, Conversor, ajustarTipo, contar
                                   prioridadeCobertura, prioridadeReserva, srcDaAti, toleranciaNaCamada, uniaoAti,
                                   uniaoUtm)
 from .nucleoCAR.processingCAR import avisoLegal, camadaPadrao, camadasPadrao, rodapeAjuda
+from .nucleoCAR.registro_correcoes import entrada, registrar
 from .nucleoCAR.validacao import (AGULHA, ANGULO_AGULHA_GRAUS, TOLERANCIA_PROXIMO_M, TOLERANCIA_VERTICE_M,
                                   vertices_suspeitos)
 
@@ -57,7 +58,9 @@ GRUPO = '4. 🔧 Correções'
 GRUPO_ID = 'correcoes'
 AVISO_EDICAO = ('<b>Segurança:</b> as correções ficam no <b>modo de edição</b> das camadas, sem salvar. Confira no mapa '
                 'e salve ou descarte as edições (Ctrl+Z desfaz). Marque <b>Salvar as alterações</b> para gravar direto. '
-                'Depois, rode a pré-análise de novo para confirmar que a pendência sumiu.')
+                'Depois, rode a pré-análise de novo para confirmar que a pendência sumiu.<br><br>'
+                'Cada correção fica registrada, e o relatório <b>Pre-Analise/GeoCAR_Correcoes_Pre-Analise_&lt;data&gt;.pdf</b> '
+                'é refeito com o fundamento legal (Lei 12.651/2012 e Decreto 7.830/2012).')
 LIMITE_REPETICOES = 10000   # trava de segurança na remoção vértice a vértice
 
 
@@ -80,6 +83,9 @@ class _BaseCorrecao(QgsProcessingAlgorithm):
     def listaDeCamadas(self, parameters, chave, context, excluir=None):
         return [c for c in self.parameterAsLayerList(parameters, chave, context)
                 if isinstance(c, QgsVectorLayer) and (excluir is None or c.id() != excluir.id())]
+
+    def registrarCorrecoes(self, entradas, salvar, feedback, context):
+        registrar(entradas, salvar, feedback, context.project())
 
     def avisarEdicao(self, camada, alterou, salvar, feedback):
         if alterou and not salvar:
@@ -140,6 +146,8 @@ class CorrigirGeometriaAtiCAR(_BaseCorrecao):
         salvar = self.parameterAsBool(parameters, self.SALVAR, context)
         ligou = editar(camada)
         corrigidas = set()
+        entradas = []
+        ferramenta = '4a'
 
         # 1. Vértices e validade, feição por feição
         for feicao in camada.getFeatures():
@@ -169,13 +177,17 @@ class CorrigirGeometriaAtiCAR(_BaseCorrecao):
                 feedback.reportError(self.tr(f'Feição {feicao.id()}: não foi possível corrigir.'), fatalError=False)
                 continue
             corrigidas.add(feicao.id())
-            for n, texto in ((duplicados, 'vértice(s) duplicado(s) removido(s)'),
-                             (proximosRemovidos, f'vértice(s) a menos de {proximos * 100:g} cm do vizinho removido(s)'),
-                             (agulhas, 'agulha(s) removida(s)')):
+            for n, texto, tipo in ((duplicados, 'vértice(s) duplicado(s) removido(s)', 'vertice_duplicado'),
+                                   (proximosRemovidos, f'vértice(s) a menos de {proximos * 100:g} cm do vizinho '
+                                                       f'removido(s)', 'vertice_proximo'),
+                                   (agulhas, 'agulha(s) removida(s)', 'agulha')):
                 if n:
                     feedback.pushInfo(self.tr(f'Feição {feicao.id()}: {n} {texto}.'))
+                    entradas.append(entrada(ferramenta, camada.name(), feicao.id(), tipo, texto, n, 'vértice(s)'))
             if invalida:
                 feedback.pushInfo(self.tr(f'Feição {feicao.id()}: geometria inválida corrigida ({motivos}).'))
+                entradas.append(entrada(ferramenta, camada.name(), feicao.id(), 'geometria_invalida',
+                                        f'geometria inválida corrigida ({motivos})'))
 
         # 2. Partes da ATI sobrepostas: dissolve na feição de menor id
         mantidas = []   # [fid, geometria na camada, geometria no UTM]
@@ -196,9 +208,12 @@ class CorrigirGeometriaAtiCAR(_BaseCorrecao):
             corrigidas.update((destino[0], feicao.id()))
             feedback.pushInfo(self.tr(f'Feições {destino[0]} e {feicao.id()} se sobrepunham ({area:.1f} m²): '
                                       f'unidas na feição {destino[0]}.'))
+            entradas.append(entrada(ferramenta, camada.name(), f'{destino[0]} e {feicao.id()}', 'partes_ati',
+                                    f'feições sobrepostas unidas na feição {destino[0]}', area, 'm²'))
 
         finalizar(camada, ligou, bool(corrigidas), salvar)
         self.avisarEdicao(camada, bool(corrigidas), salvar, feedback)
+        self.registrarCorrecoes(entradas, salvar, feedback, context)
         if not corrigidas:
             feedback.pushInfo(self.tr('Nenhuma correção necessária.'))
         return {self.OUTPUT_N: len(corrigidas)}
@@ -254,6 +269,7 @@ class RecortarPelaAtiCAR(_BaseCorrecao):
         ati = uniaoAti(camadaAti, src)
         salvar = self.parameterAsBool(parameters, self.SALVAR, context)
         totalHa = 0.0
+        entradas = []
         for camada in camadas:
             conversor = Conversor(camada, src)
             ligou = editar(camada)
@@ -271,13 +287,18 @@ class RecortarPelaAtiCAR(_BaseCorrecao):
                     camada.deleteFeature(feicao.id())
                     feedback.pushInfo(self.tr(f'{camada.name()}, feição {feicao.id()}: inteira fora da ATI '
                                               f'({fora.area() / 10000.0:.4f} ha) — excluída.'))
+                    entradas.append(entrada('4b', camada.name(), feicao.id(), 'fora_ati',
+                                            'feição inteira fora da ATI excluída', fora.area(), 'm²'))
                 else:
                     camada.changeGeometry(feicao.id(), ajustarTipo(conversor.paraCamada(dentro), camada))
                     feedback.pushInfo(self.tr(f'{camada.name()}, feição {feicao.id()}: {fora.area() / 10000.0:.4f} ha '
                                               f'fora da ATI recortados.'))
+                    entradas.append(entrada('4b', camada.name(), feicao.id(), 'fora_ati',
+                                            'parte fora da ATI recortada', fora.area(), 'm²'))
                 alterou = True
             finalizar(camada, ligou, alterou, salvar)
             self.avisarEdicao(camada, alterou, salvar, feedback)
+        self.registrarCorrecoes(entradas, salvar, feedback, context)
         if totalHa == 0:
             feedback.pushInfo(self.tr('Nenhuma feição passa da ATI.'))
         return {self.OUTPUT_HA: round(totalHa, 4)}
@@ -336,7 +357,7 @@ class ResolverSobreposicoesCAR(_BaseCorrecao):
         self.parametroSalvar()
         self.addOutput(QgsProcessingOutputNumber(self.OUTPUT_HA, self.tr('Área sobreposta removida (ha)')))
 
-    def _subtrairEmOrdem(self, camadas, src, ocupado, motivo, salvar, feedback):
+    def _subtrairEmOrdem(self, camadas, src, ocupado, motivo, salvar, feedback, entradas, tipo, servidao=None):
         """
         Em cada camada (na ordem de prioridade), tira das feições o que já está ocupado pelas anteriores
         (e pela geometria inicial). Retorna a área removida, em m².
@@ -344,12 +365,13 @@ class ResolverSobreposicoesCAR(_BaseCorrecao):
         removido = 0.0
         for camada in camadas:
             conversor = Conversor(camada, src)
-            originais, mudancas = [], []
+            originais, mudancas, feicoes = [], [], {}
             for feicao in camada.getFeatures():
                 if not feicao.hasGeometry():
                     continue
                 geometria = conversor.paraUtm(feicao.geometry()).makeValid()
                 originais.append(geometria)
+                feicoes[feicao.id()] = geometria
                 if ocupado.isEmpty() or not geometria.boundingBox().intersects(ocupado.boundingBox()):
                     continue
                 comum = geometria.intersection(ocupado)
@@ -360,6 +382,7 @@ class ResolverSobreposicoesCAR(_BaseCorrecao):
                 ligou = editar(camada)
                 for fid, resto, area in mudancas:
                     removido += area
+                    self._anotar(entradas, camada, fid, area, tipo, servidao, conversor, feicoes)
                     if resto.isEmpty() or resto.area() < AREA_MINIMA_M2:
                         camada.deleteFeature(fid)
                         feedback.pushInfo(self.tr(f'{camada.name()}, feição {fid}: inteira sobre {motivo} — excluída.'))
@@ -373,6 +396,23 @@ class ResolverSobreposicoesCAR(_BaseCorrecao):
                 ocupado = QgsGeometry.unaryUnion([ocupado] + originais) if not ocupado.isEmpty() \
                     else QgsGeometry.unaryUnion(originais)
         return removido
+
+    @staticmethod
+    def _anotar(entradas, camada, fid, area, tipo, servidao, _conversor, feicoes):
+        """Registra a correção; na RL, separa a parte sobre servidão da parte sobre outra RL."""
+        if tipo == 'sobreposicao_rl' and servidao is not None and not servidao.isEmpty():
+            sobreServidao = feicoes[fid].intersection(servidao)
+            areaServidao = 0.0 if sobreServidao.isEmpty() else sobreServidao.area()
+            if areaServidao >= AREA_MINIMA_M2:
+                entradas.append(entrada('4c', camada.name(), fid, 'servidao_rl',
+                                        'parte sobre servidão administrativa retirada da RL', areaServidao, 'm²'))
+            area -= areaServidao
+            if area < AREA_MINIMA_M2:
+                return
+            detalhe = 'parte sobre RL de maior prioridade retirada'
+        else:
+            detalhe = 'parte sobre cobertura de maior prioridade retirada'
+        entradas.append(entrada('4c', camada.name(), fid, tipo, detalhe, area, 'm²'))
 
     def processAlgorithm(self, parameters, context, feedback):
         camadaAti = self.camadaAti(parameters, context)
@@ -395,11 +435,14 @@ class ResolverSobreposicoesCAR(_BaseCorrecao):
             feedback.pushInfo(self.tr('Reservas Legais, da que prevalece para a que cede: '
                                       + ' > '.join(c.name() for c in reservas)))
 
+        entradas = []
+        servidao = uniaoUtm(servidoes, src)
         removido = self._subtrairEmOrdem(coberturas, src, QgsGeometry(), 'cobertura de maior prioridade',
-                                         salvar, feedback)
-        removido += self._subtrairEmOrdem(reservas, src, uniaoUtm(servidoes, src),
+                                         salvar, feedback, entradas, 'sobreposicao_cobertura')
+        removido += self._subtrairEmOrdem(reservas, src, QgsGeometry(servidao),
                                           'servidão administrativa ou Reserva Legal de maior prioridade',
-                                          salvar, feedback)
+                                          salvar, feedback, entradas, 'sobreposicao_rl', servidao)
+        self.registrarCorrecoes(entradas, salvar, feedback, context)
         if not removido:
             feedback.pushInfo(self.tr('Nenhuma sobreposição entre as camadas.'))
         return {self.OUTPUT_HA: round(removido / 10000.0, 4)}
@@ -480,7 +523,7 @@ class PreencherLascasCAR(_BaseCorrecao):
         lascas = [p for p in semCobertura.asGeometryCollection()
                   if not p.isEmpty() and p.area() >= AREA_MINIMA_M2] if not semCobertura.isEmpty() else []
 
-        preenchidaHa, grandes, alteradas = 0.0, [], {}
+        preenchidaHa, grandes, alteradas, entradas = 0.0, [], {}, []
         for lasca in lascas:
             if lasca.area() > areaMaxima:
                 grandes.append(lasca.area())
@@ -500,6 +543,8 @@ class PreencherLascasCAR(_BaseCorrecao):
             alteradas[(melhor[0].id(), melhor[1])] = melhor
             preenchidaHa += lasca.area() / 10000.0
             feedback.pushInfo(self.tr(f'Lasca de {lasca.area():.1f} m² juntada a {melhor[0].name()} (feição {melhor[1]}).'))
+            entradas.append(entrada('4d', melhor[0].name(), melhor[1], 'lasca', 'lasca sem cobertura juntada à feição',
+                                    lasca.area(), 'm²'))
 
         salvar = self.parameterAsBool(parameters, self.SALVAR, context)
         porCamada = {}
@@ -512,6 +557,7 @@ class PreencherLascasCAR(_BaseCorrecao):
                 camada.changeGeometry(fid, ajustarTipo(conversor.paraCamada(geometria), camada))
             finalizar(camada, ligou, True, salvar)
             self.avisarEdicao(camada, True, salvar, feedback)
+        self.registrarCorrecoes(entradas, salvar, feedback, context)
         if grandes:
             feedback.pushWarning(self.tr(
                 f'{len(grandes)} área(s) sem cobertura maiores que {areaMaxima:g} m² ({sum(grandes) / 10000.0:.4f} ha) '

@@ -475,7 +475,7 @@ def _evitarTabelasQuebradas(documento, alturaPagina):
             return
 
 
-def _salvar_pdf(html, caminho):
+def _salvar_pdf(html, caminho, titulo="GeoCAR — Resultados da Pré-Análise"):
     """Converte o HTML do relatório em PDF (A4) com QTextDocument e QPrinter, sem dependências externas."""
     from qgis.PyQt.QtCore import QMarginsF, QSizeF
     from qgis.PyQt.QtGui import QPageLayout, QPageSize, QTextDocument
@@ -493,7 +493,7 @@ def _salvar_pdf(html, caminho):
         enum_compat(QPageLayout, "Orientation", "Portrait"),
         QMarginsF(15, 15, 15, 15),
         enum_compat(QPageLayout, "Unit", "Millimeter")))
-    impressora.setDocName("GeoCAR — Resultados da Pré-Análise")
+    impressora.setDocName(titulo)
 
     # No PDF usa o CSS compacto, para as tabelas caberem inteiras na página
     html = html.replace(CSS, CSS_PDF, 1)
