@@ -10,21 +10,28 @@ Verifica:
 - camadas internas (vegetação, área consolidada) extrapolando o perímetro
 """
 
+from qgis.core import QgsPointXY
+
 from .utils import area_ha, feicoes_no_src, recortar, subtrair, uniao
 
 TOLERANCIA_VERTICE_M = 0.001   # 1 mm
 AREA_MINIMA_SOBREPOSICAO_HA = 0.0001  # 1 m², abaixo disso é ruído numérico
 
 
-def contar_vertices_duplicados(geometria, tolerancia=TOLERANCIA_VERTICE_M):
-    """Conta vértices consecutivos coincidentes (dentro da tolerância, em metros)."""
-    total = 0
+def vertices_duplicados(geometria, tolerancia=TOLERANCIA_VERTICE_M):
+    """Vértices consecutivos coincidentes (dentro da tolerância, em metros): lista dos pontos onde ocorrem."""
+    pontos = []
     anterior = None
     for vertice in geometria.vertices():
         if anterior is not None and vertice.distance(anterior) < tolerancia:
-            total += 1
+            pontos.append(QgsPointXY(vertice.x(), vertice.y()))
         anterior = vertice
-    return total
+    return pontos
+
+
+def contar_vertices_duplicados(geometria, tolerancia=TOLERANCIA_VERTICE_M):
+    """Conta vértices consecutivos coincidentes (dentro da tolerância, em metros)."""
+    return len(vertices_duplicados(geometria, tolerancia))
 
 
 def validar_perimetro(camada, src_trabalho):
@@ -42,7 +49,8 @@ def validar_perimetro(camada, src_trabalho):
         geometrias.append((fid, geom))
 
         # Vértices duplicados (checagem própria, com tolerância métrica)
-        duplicados = contar_vertices_duplicados(geom)
+        pontosDuplicados = vertices_duplicados(geom)
+        duplicados = len(pontosDuplicados)
 
         # Validade GEOS — se já houver vértice duplicado, descarta o aviso equivalente
         # do GEOS ("duplicate"/"duplicados") para não repetir o mesmo problema
@@ -57,12 +65,13 @@ def validar_perimetro(camada, src_trabalho):
                 "ponto": ponto,
             })
 
-        if duplicados:
+        # Um ponto em cada vértice duplicado, para achar o local no mapa
+        for ponto in pontosDuplicados:
             problemas.append({
                 "feicao": fid,
                 "tipo": "Vértices duplicados",
-                "descricao": f"{duplicados} vértice(s) consecutivo(s) coincidente(s).",
-                "ponto": geom.centroid().asPoint(),
+                "descricao": f"Vértice repetido em sequência ({duplicados} na feição): apague um deles.",
+                "ponto": ponto,
             })
 
         # Multiparte
