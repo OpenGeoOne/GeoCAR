@@ -133,11 +133,11 @@ ESTILOS_FIXOS = {
                                 'outline_style': 'dash'},
     'Area_Consolidada': {'color': '230,200,120,110', 'outline_color': '180,140,60', 'outline_width': '0.4'},
     'RL_Rascunho': {'color': '0,170,60,90', 'outline_color': '0,110,40', 'outline_width': '0.8', 'outline_style': 'dash'},
-    'APP_Integral': {'color': '0,160,255,90', 'outline_color': '0,100,200', 'outline_width': '0.4'},
-    'Faixa_Escadinha': {'color': '0,90,200,120', 'outline_color': '0,60,160', 'outline_width': '0.4'},
-    'APP_Recompor_Consolidada': {'color': '255,120,0,130', 'outline_color': '200,80,0', 'outline_width': '0.4'},
-    'Uso_Consolidado_em_APP': {'color': '255,230,0,120', 'outline_color': '200,170,0', 'outline_width': '0.4'},
-    'APP_Fora_Consolidada': {'color': '0,200,200,100', 'outline_color': '0,140,140', 'outline_width': '0.4'},
+    'APP_Integral': {'color': '170,215,255,90', 'outline_color': '90,150,215', 'outline_width': '0.4'},
+    'Faixa_Escadinha': {'color': '30,110,220,120', 'outline_color': '0,70,170', 'outline_width': '0.5', 'outline_style': 'dash'},
+    'APP_Recompor_Consolidada': {'color': '0,40,140,160', 'outline_color': '0,20,90', 'outline_width': '0.5'},
+    'Uso_Consolidado_em_APP': {'color': '130,160,200,130', 'outline_color': '70,100,150', 'outline_width': '0.4'},
+    'APP_Fora_Consolidada': {'color': '100,170,240,110', 'outline_color': '40,120,200', 'outline_width': '0.4'},
 }
 
 
