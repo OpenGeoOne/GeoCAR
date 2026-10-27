@@ -382,7 +382,7 @@ class ReservaLegalRelatorioCAR(QgsProcessingAlgorithm):
 • consistência entre camadas (coberturas do solo, Reserva Legal e servidões — parâmetros avançados)
 • APP hídrica integral, faixa da escadinha e teto do art. 61-B
 • Reserva Legal
-• comparação com as parcelas certificadas no SIGEF (camada Parcelas_SIGEF, da ferramenta 1c): parcela de terceiro dentro da ATI, várias matrículas, área sem certificação — parâmetro avançado
+• comparação com as parcelas certificadas no SIGEF (camada Parcelas_SIGEF, da ferramenta 1b): parcela de terceiro dentro da ATI, várias matrículas, área sem certificação — parâmetro avançado
 
 A <b>primeira página</b> do relatório é o resumo <b>O que corrigir</b>, montado a partir dos resultados: o que resolver antes de enviar, ajustes pequenos, o que recompor e conferir, restrições próximas para ficar atento e os <b>documentos a reunir</b> para cada pendência.
 

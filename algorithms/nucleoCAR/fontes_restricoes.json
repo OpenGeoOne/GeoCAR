@@ -1,5 +1,5 @@
 {
-  "_comentario": "Endereços dos serviços oficiais usados pela ferramenta 1c. Se um endereço mudar, basta editar este arquivo. servico: wfs_cnuc (WFS do MMA, escolhe a camada CNUC mais recente), wfs ou arcgis (FeatureServer/MapServer do ArcGIS). campos: candidatos, na ordem; o primeiro preenchido é usado. alternativas: usadas só se o serviço principal falhar. sigef: parcelas certificadas privadas, gravadas à parte (camada Parcelas_SIGEF).",
+  "_comentario": "Endereços dos serviços oficiais usados pelas consultas: restrições (1d), SIGEF (1b) e desmatamento do PRODES (1e). Se um endereço mudar, basta editar este arquivo. servico: wfs_cnuc (WFS do MMA, escolhe a camada CNUC mais recente), wfs ou arcgis (FeatureServer/MapServer do ArcGIS). campos: candidatos, na ordem; o primeiro preenchido é usado. alternativas: usadas só se o serviço principal falhar. sigef: parcelas certificadas privadas, gravadas à parte (camada Parcelas_SIGEF).",
   "fontes": [
     {
       "tipo": "Unidade de Conservação",
