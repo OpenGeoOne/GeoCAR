@@ -25,8 +25,14 @@ VALORES_RL = [20.0, 35.0, 80.0]
 
 # Resultados da pré-análise na estrutura RAIZ
 PASTA_RESULTADOS = 'Pre-Analise'
-GRUPO_RESULTADOS = 'Resultados da Pré-Análise'
+# Grupo-pai com tudo o que o plugin cria (nada dele vai para o SICAR)
+GRUPO_PAI = 'Pré-Análise (GeoCAR)'
+GRUPO_CONSULTAS = GRUPO_PAI + '/Consultas'
+GRUPO_APOIO = GRUPO_PAI + '/Apoio'
+GRUPO_RESULTADOS = GRUPO_PAI + '/Resultados'
 GRUPO_RESULTADOS_FIXO = GRUPO_RESULTADOS
+# Grupos das versões anteriores: migrados para dentro do grupo-pai (nome antigo -> subgrupo)
+GRUPOS_ANTIGOS = {'Areas_Vizinhas': 'Consultas', 'Apoio à Pré-Análise': 'Apoio', 'Resultados da Pré-Análise': 'Resultados'}
 SUBGRUPO_APP = 'APP Hídrica'
 
 # Camadas fixas da estrutura RAIZ (vazias no modelo) ficam neste GeoPackage, na pasta Pre-Analise
@@ -118,8 +124,8 @@ CAMADAS_FIXAS = {
                                             ('descricao', _S)]),
 }
 GRUPOS_FIXOS = [
-    ('Areas_Vizinhas', ['CAR_Vizinhos_SICAR', 'Restricoes_Territoriais', 'Parcelas_SIGEF', 'Desmatamento_PRODES']),
-    ('Apoio à Pré-Análise', ['Area_Consolidada', 'RL_Rascunho']),
+    (GRUPO_CONSULTAS, ['CAR_Vizinhos_SICAR', 'Restricoes_Territoriais', 'Parcelas_SIGEF', 'Desmatamento_PRODES']),
+    (GRUPO_APOIO, ['Area_Consolidada', 'RL_Rascunho']),
     (GRUPO_RESULTADOS_FIXO, ['Problemas_Validacao', 'Sobreposicoes', 'Inconsistencias', 'Divergencias_SIGEF',
                               'Desmatamento_Pos_2008', 'Retificacao_CAR']),
     # Subgrupo com as camadas da APP hídrica (ferramenta b)
@@ -193,11 +199,43 @@ def estiloFixo(camada):
     aplicarEstilo(camada)
 
 
+def migrarGrupos(raiz):
+    """
+    Projetos das versões anteriores: leva os grupos Areas_Vizinhas, Apoio à Pré-Análise e Resultados da
+    Pré-Análise para dentro de Pré-Análise (GeoCAR), já com os nomes novos, mantendo camadas e estilos.
+    O grupo-pai fica no lugar do primeiro grupo antigo. Sem grupos antigos, não faz nada.
+    """
+    antigos = [g for g in raiz.findGroups(True) if g.name() in GRUPOS_ANTIGOS
+               and (g.parent() is None or g.parent().name() != GRUPO_PAI)]
+    if not antigos:
+        return False
+    pai = next((g for g in raiz.findGroups(True) if g.name() == GRUPO_PAI), None)
+    if pai is None:
+        primeiro = antigos[0]
+        lugar = primeiro.parent() or raiz
+        pai = lugar.insertGroup(lugar.children().index(primeiro), GRUPO_PAI)
+    ordem = list(GRUPOS_ANTIGOS)
+    for antigo in sorted(antigos, key=lambda g: ordem.index(g.name())):
+        novoNome = GRUPOS_ANTIGOS[antigo.name()]
+        existente = next((g for g in pai.children() if isinstance(g, QgsLayerTreeGroup) and g.name() == novoNome), None)
+        if existente is None:
+            copia = antigo.clone()
+            copia.setName(novoNome)
+            pai.addChildNode(copia)
+        else:
+            for filho in antigo.children():
+                existente.addChildNode(filho.clone())
+        (antigo.parent() or raiz).removeChildNode(antigo)
+    return True
+
+
 def grupoPorCaminho(raiz, caminho):
     """
     Grupo da árvore de camadas pelo caminho "Grupo" ou "Grupo/Subgrupo", criando o que faltar.
     O grupo principal novo fica abaixo do último grupo da raiz; o subgrupo novo, no fim do grupo.
+    Antes, migra os grupos das versões anteriores para dentro do grupo-pai.
     """
+    migrarGrupos(raiz)
     partes = caminho.split('/')
     grupo = next((g for g in raiz.children() if isinstance(g, QgsLayerTreeGroup)
                   and g.name().lower() == partes[0].lower()), None)
@@ -221,7 +259,7 @@ def grupoDaCamada(nomeCamada, padrao=GRUPO_RESULTADOS):
 def criarEstruturaFixa(projeto):
     """
     Cria no projeto (salvo) o Pre-Analise/PreAnalise.gpkg com as camadas fixas que faltam e os grupos
-    Areas_Vizinhas, Apoio à Pré-Análise e Resultados da Pré-Análise, abaixo dos grupos existentes.
+    Pré-Análise (GeoCAR) › Consultas, Apoio e Resultados, abaixo dos grupos existentes.
     A Area_Consolidada só é criada se o projeto ainda não tiver camada de área consolidada.
     """
     if not projetoSalvo(projeto):

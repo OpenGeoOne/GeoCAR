@@ -218,7 +218,7 @@ class PropostaReservaLegalCAR(QgsProcessingAlgorithm):
 • Se faltar, completa com <b>APP vegetada</b> (art. 15), se a opção estiver marcada
 • O que nem a vegetação cobre aparece como déficit: recompor, regenerar ou compensar (art. 66); art. 67 para imóveis de até 4 módulos fiscais
 
-O resultado vai para a camada <b>RL_Rascunho</b> (grupo <b>Apoio à Pré-Análise</b>), com a origem de cada parte. Rode depois da pré-análise do grupo 3, que gera a <b>APP_Integral</b>.
+O resultado vai para a camada <b>RL_Rascunho</b> (grupo <b>Pré-Análise (GeoCAR) › Apoio</b>), com a origem de cada parte. Rode depois da pré-análise do grupo 3, que gera a <b>APP_Integral</b>.
 
 <b>É um ponto de partida:</b> a localização da RL é escolha do proprietário, aprovada pelo órgão ambiental (art. 14), que considera plano de bacia, zoneamento, corredores e áreas frágeis. Ajuste o desenho e copie para a camada de RL proposta da RAIZ.
 

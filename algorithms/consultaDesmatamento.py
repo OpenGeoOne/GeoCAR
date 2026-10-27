@@ -140,7 +140,7 @@ class ConsultaDesmatamentoCAR(QgsProcessingAlgorithm):
     def shortHelpString(self):
         txt = """Consulta o <b>desmatamento anual do PRODES</b> (INPE, portal TerraBrasilis), nos seis biomas, na área da ATI: ano, data da imagem que detectou o desmatamento e se ele é <b>anterior ou posterior a 22/07/2008</b>, o marco do Código Florestal.
 
-O resultado vai para a camada <b>Desmatamento_PRODES</b> (grupo <b>Areas_Vizinhas</b>, no <b>Pre-Analise/PreAnalise.gpkg</b>), apagando a consulta anterior. A ferramenta <b>3c</b> cruza o desmatamento posterior a 2008 com a ATI, a área consolidada, a APP e a Reserva Legal. Não precisa rodar antes da 3c: se ainda não foi consultado, a 3c consulta sozinha.
+O resultado vai para a camada <b>Desmatamento_PRODES</b> (grupo <b>Pré-Análise (GeoCAR) › Consultas</b>, no <b>Pre-Analise/PreAnalise.gpkg</b>), apagando a consulta anterior. A ferramenta <b>3c</b> cruza o desmatamento posterior a 2008 com a ATI, a área consolidada, a APP e a Reserva Legal. Não precisa rodar antes da 3c: se ainda não foi consultado, a 3c consulta sozinha.
 
 Por que importa: área desmatada depois de 22/07/2008 <b>não é área consolidada</b> (Lei 12.651/2012, art. 3º, IV), não tem as regras da escadinha (art. 61-A) e, em APP ou Reserva Legal, deve ser recomposta (arts. 7º e 17).
 

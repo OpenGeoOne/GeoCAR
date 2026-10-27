@@ -36,7 +36,7 @@ from .nucleoCAR.processingCAR import (PosProcessamentoGrupo, camadaFixa, garanti
 
 # Resultado da Consulta CAR na estrutura RAIZ
 NOME_VIZINHOS = 'CAR_Vizinhos_SICAR'
-GRUPO_VIZINHOS = 'Areas_Vizinhas'
+from .nucleoCAR.processingCAR import GRUPO_CONSULTAS as GRUPO_VIZINHOS
 
 
 class baixarCAR(QgsProcessingAlgorithm):
@@ -272,7 +272,7 @@ A ferramenta acessa automaticamente os serviços <b>WFS do SICAR</b> ou a base <
 • Camada – tipo de dado CAR a consultar  
 • Consultar base da GeoOne – utiliza o servidor GeoOne em vez do SICAR oficial
 <b>Resultado:</b>
-Os imóveis CAR encontrados na área selecionada são gravados na camada <b>CAR_Vizinhos_SICAR</b>, no grupo <b>Areas_Vizinhas</b>. A camada fica no <b>Pre-Analise/PreAnalise.gpkg</b> do projeto (criado na primeira execução, se ainda não existir), e cada consulta apaga a anterior. Com o projeto ainda não salvo, o resultado sai em camada temporária.
+Os imóveis CAR encontrados na área selecionada são gravados na camada <b>CAR_Vizinhos_SICAR</b>, no grupo <b>Pré-Análise (GeoCAR) › Consultas</b>. A camada fica no <b>Pre-Analise/PreAnalise.gpkg</b> do projeto (criado na primeira execução, se ainda não existir), e cada consulta apaga a anterior. Com o projeto ainda não salvo, o resultado sai em camada temporária.
 <b>Observação:</b>
 A área de consulta deve ser pequena (até aproximadamente 1°) para garantir desempenho adequado na consulta WFS.
 """
@@ -297,7 +297,7 @@ A área de consulta deve ser pequena (até aproximadamente 1°) para garantir de
 
 
 class Renamer(PosProcessamentoGrupo):
-    """Renomeia o resultado da Consulta CAR e o coloca no grupo Areas_Vizinhas."""
+    """Renomeia o resultado da Consulta CAR e o coloca no grupo Pré-Análise (GeoCAR) › Consultas."""
 
     def __init__(self, layer_name):
         super().__init__(layer_name, GRUPO_VIZINHOS)

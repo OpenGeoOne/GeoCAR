@@ -304,6 +304,6 @@ class AppHidricaCAR(QgsProcessingAlgorithm):
 Com a camada de <b>área consolidada</b>, separa o que deve ser recomposto do uso que pode ser mantido e verifica o <b>teto do art. 61-B</b> (10% até 2 MF; 20% de 2 a 4 MF).
 
 A hidrografia linear é tratada como eixo: a faixa é medida da borda do leito regular (largura/2). Complementa a ferramenta <b>APP altitude, declividade e uso restrito</b>.
-<b>Resultados:</b> vão para as camadas do grupo <b>Resultados da Pré-Análise</b>, no <b>Pre-Analise/PreAnalise.gpkg</b> do projeto (criado na primeira execução, se ainda não existir), apagando os anteriores; as saídas desta tela são cópias opcionais. Com o projeto ainda não salvo, os resultados saem em camadas temporárias. As entradas já vêm preenchidas com as camadas da RAIZ.
+<b>Resultados:</b> vão para as camadas do grupo <b>Pré-Análise (GeoCAR) › Resultados</b>, no <b>Pre-Analise/PreAnalise.gpkg</b> do projeto (criado na primeira execução, se ainda não existir), apagando os anteriores; as saídas desta tela são cópias opcionais. Com o projeto ainda não salvo, os resultados saem em camadas temporárias. As entradas já vêm preenchidas com as camadas da RAIZ.
 """ + avisoLegal()
         return txt + rodapeAjuda()

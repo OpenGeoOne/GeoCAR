@@ -180,7 +180,7 @@ class ConsistenciaCamadasCAR(QgsProcessingAlgorithm):
 • trecho de Reserva Legal sem vegetação nativa (a recompor)
 • área da ATI sem cobertura do solo declarada
 
-<b>Resultados:</b> vão para a camada <b>Inconsistencias</b> do grupo <b>Resultados da Pré-Análise</b>, no <b>Pre-Analise/PreAnalise.gpkg</b> do projeto (criado na primeira execução, se ainda não existir), apagando os anteriores. As entradas já vêm preenchidas com as camadas da RAIZ; confira as listas, pois os nomes variam entre os estados.
+<b>Resultados:</b> vão para a camada <b>Inconsistencias</b> do grupo <b>Pré-Análise (GeoCAR) › Resultados</b>, no <b>Pre-Analise/PreAnalise.gpkg</b> do projeto (criado na primeira execução, se ainda não existir), apagando os anteriores. As entradas já vêm preenchidas com as camadas da RAIZ; confira as listas, pois os nomes variam entre os estados.
 
 Os cálculos são feitos em <b>SIRGAS 2000 / UTM</b> do fuso do imóvel, escolhido automaticamente.
 """ + avisoLegal()

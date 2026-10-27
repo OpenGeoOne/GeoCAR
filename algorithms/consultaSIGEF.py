@@ -132,7 +132,7 @@ class ConsultaSigefCAR(QgsProcessingAlgorithm):
     def shortHelpString(self):
         txt = """Consulta as <b>parcelas certificadas no SIGEF</b> (INCRA) que tocam a ATI e as dos <b>imóveis vizinhos</b>, na margem informada (padrão de 1 km, a mesma da Consulta CAR automática): código do imóvel, nome, matrícula, situação e data de aprovação.
 
-O resultado vai para a camada <b>Parcelas_SIGEF</b> (grupo <b>Areas_Vizinhas</b>, no <b>Pre-Analise/PreAnalise.gpkg</b>), apagando a consulta anterior. A ferramenta <b>3c</b> compara essas parcelas com a ATI: parcela de terceiro dentro da ATI, várias matrículas reunidas, área sem certificação.
+O resultado vai para a camada <b>Parcelas_SIGEF</b> (grupo <b>Pré-Análise (GeoCAR) › Consultas</b>, no <b>Pre-Analise/PreAnalise.gpkg</b>), apagando a consulta anterior. A ferramenta <b>3c</b> compara essas parcelas com a ATI: parcela de terceiro dentro da ATI, várias matrículas reunidas, área sem certificação.
 
 Não precisa rodar antes da 3c: se as parcelas ainda não foram consultadas, a 3c faz a consulta sozinha.
 

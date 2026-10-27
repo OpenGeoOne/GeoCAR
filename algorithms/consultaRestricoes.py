@@ -61,7 +61,7 @@ from qgis.PyQt.QtNetwork import QNetworkRequest
 from .nucleoCAR.processingCAR import PosProcessamentoCopiaFixa, avisoLegal, camadaPadrao, rodapeAjuda
 
 NOME_RESTRICOES = 'Restricoes_Territoriais'
-GRUPO_RESTRICOES = 'Areas_Vizinhas'
+from .nucleoCAR.processingCAR import GRUPO_CONSULTAS as GRUPO_RESTRICOES
 ARQUIVO_FONTES = os.path.join(os.path.dirname(__file__), 'nucleoCAR', 'fontes_restricoes.json')
 
 
@@ -283,7 +283,7 @@ class ConsultaRestricoesCAR(QgsProcessingAlgorithm):
 • <b>Glebas públicas federais</b> — SIGEF público (INCRA)
 
 
-O resultado vai para a camada <b>Restricoes_Territoriais</b> (grupo <b>Areas_Vizinhas</b>, no <b>Pre-Analise/PreAnalise.gpkg</b>), apagando a consulta anterior, e entra automaticamente como camada de restrição nas ferramentas <b>3a</b> e <b>3c</b>.
+O resultado vai para a camada <b>Restricoes_Territoriais</b> (grupo <b>Pré-Análise (GeoCAR) › Consultas</b>, no <b>Pre-Analise/PreAnalise.gpkg</b>), apagando a consulta anterior, e entra automaticamente como camada de restrição nas ferramentas <b>3a</b> e <b>3c</b>.
 
 <b>Atenção:</b> sobreposição com APA (Área de Proteção Ambiental) não impede o CAR — a APA admite propriedade privada. Já UC de proteção integral, Terra Indígena, assentamento, embargo e floresta pública exigem análise. Os nomes e CPF/CNPJ dos embargados não são copiados.
 
