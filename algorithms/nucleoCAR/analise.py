@@ -179,7 +179,7 @@ def executar(p):
         camadas.append(c_sig)
 
     if car_anterior is not None and car_anterior.get("itens"):
-        c_car = criar_camada_memoria("Comparação com o CAR atual", "MultiPolygon", src,
+        c_car = criar_camada_memoria("Retificação do CAR", "MultiPolygon", src,
                                      [("tipo", "string"), ("codigo", "string"), ("area_ha", "double")])
         for item in car_anterior["itens"]:
             adicionar_feicao(c_car, item["geometria"], [item["tipo"], car_anterior["codigo"],

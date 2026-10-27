@@ -523,7 +523,7 @@ def gerar_relatorio_html(r, caminho):
         ], colunas_num=(1,)))
         if ca["confirmado"]:
             partes.append("<p>Na retificação, o CAR atual não conta como sobreposição. As áreas acrescidas e retiradas "
-                          "estão na camada Comparacao_CAR_Atual.</p>")
+                          "estão na camada Retificacao_CAR.</p>")
 
     partes.append(
         "<p class='nota'>Pré-análise técnica automatizada, de caráter indicativo. Não substitui "

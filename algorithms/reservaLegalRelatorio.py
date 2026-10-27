@@ -108,7 +108,7 @@ class ReservaLegalRelatorioCAR(QgsProcessingAlgorithm):
         'Inconsistências': 'Inconsistencias',
         'Divergências SIGEF': 'Divergencias_SIGEF',
         'Desmatamento após 2008': 'Desmatamento_Pos_2008',
-        'Comparação com o CAR atual': 'Comparacao_CAR_Atual',
+        'Retificação do CAR': 'Retificacao_CAR',
     }
 
     OUTPUT_RL_EXIGIDA = 'OUTPUT_RL_EXIGIDA'

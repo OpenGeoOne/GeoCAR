@@ -104,7 +104,7 @@ CAMADAS_FIXAS = {
     'RL_Rascunho': ('MultiPolygon', [('origem', _S), ('area_ha', _D)]),
     'Desmatamento_PRODES': ('MultiPolygon', [('bioma', _S), ('ano', _I), ('data_imagem', _S), ('periodo', _S),
                                              ('area_ha', _D), ('fonte', _S), ('consulta', _S)]),
-    'Comparacao_CAR_Atual': ('MultiPolygon', [('tipo', _S), ('codigo', _S), ('area_ha', _D)]),
+    'Retificacao_CAR': ('MultiPolygon', [('tipo', _S), ('codigo', _S), ('area_ha', _D)]),
     'Desmatamento_Pos_2008': ('MultiPolygon', [('tipo', _S), ('ano', _I), ('data_imagem', _S), ('area_ha', _D)]),
     'Problemas_Validacao': ('Point', [('feicao', _S), ('tipo', _S), ('descricao', _S)]),
     'Sobreposicoes': ('MultiPolygon', [('camada', _S), ('identific', _S), ('classe', _S), ('area_ha', _D),
@@ -121,7 +121,7 @@ GRUPOS_FIXOS = [
     ('Areas_Vizinhas', ['CAR_Vizinhos_SICAR', 'Restricoes_Territoriais', 'Parcelas_SIGEF', 'Desmatamento_PRODES']),
     ('Apoio à Pré-Análise', ['Area_Consolidada', 'RL_Rascunho']),
     (GRUPO_RESULTADOS_FIXO, ['Problemas_Validacao', 'Sobreposicoes', 'Inconsistencias', 'Divergencias_SIGEF',
-                              'Desmatamento_Pos_2008', 'Comparacao_CAR_Atual']),
+                              'Desmatamento_Pos_2008', 'Retificacao_CAR']),
     # Subgrupo com as camadas da APP hídrica (ferramenta b)
     (GRUPO_RESULTADOS_FIXO + '/' + SUBGRUPO_APP, ['APP_Integral', 'Faixa_Escadinha', 'APP_Recompor_Consolidada',
                                                   'Uso_Consolidado_em_APP', 'APP_Fora_Consolidada']),
@@ -440,7 +440,7 @@ def aplicarEstilo(camada):
                                                                 'outline_width': '0.4'}), v)
             for v, cor, borda in cores]))
         return
-    if camada.name() == 'Comparacao_CAR_Atual':
+    if camada.name() == 'Retificacao_CAR':
         cores = [('Acrescida na retificação', '0,170,60,120', '0,110,40'),
                  ('Retirada na retificação', '220,0,0,90', '160,0,0')]
         camada.setRenderer(QgsCategorizedSymbolRenderer('tipo', [
