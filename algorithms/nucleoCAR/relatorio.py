@@ -209,7 +209,7 @@ def _plano_acao(r):
     if ca is not None:
         if not ca.get("encontrado"):
             atencao.append(f"O CAR informado ({ca['codigo']}) não foi encontrado na consulta do SICAR em volta da ATI: "
-                           f"confira o código ou rode de novo a Consulta CAR (1a); o cadastro pode estar cancelado.")
+                           f"confira o código ou rode de novo a Consulta CAR (1b); o cadastro pode estar cancelado.")
         elif ca.get("provavel"):
             bloqueia.append(f"O CAR {ca['codigo']} ({ca['status']}) cobre {_n(ca['perc_ati'], 1)}% da ATI, e "
                             f"{_n(ca['perc_car'], 1)}% dele está dentro dela: é provavelmente o CAR deste mesmo imóvel "

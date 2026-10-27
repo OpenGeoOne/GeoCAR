@@ -110,17 +110,18 @@ def parcelasSigef(extensao, feedback):
     return memoria
 
 
-def garantirParcelasSigef(context, feedback, camadaAti):
+def garantirParcelasSigef(context, feedback, camadaAti, forcar=False, margem=None):
     """
     Camada de parcelas certificadas do SIGEF para a análise. Ainda não consultada no projeto: consulta pela
     extensão da ATI e grava na camada fixa Parcelas_SIGEF (projeto salvo) ou devolve a camada de memória.
     """
     projeto = context.project() or QgsProject.instance()
     fixa = garantirCamadaFixa(NOME_SIGEF, projeto)
-    if jaConsultada(fixa):
+    if not forcar and jaConsultada(fixa):
         return fixa
-    feedback.pushInfo('Vizinhos com SIGEF ainda não consultados: consultando as parcelas certificadas pela ATI...')
-    memoria = parcelasSigef(extensaoDaAti(camadaAti, MARGEM_SIGEF_M), feedback)
+    feedback.pushInfo('Consultando as parcelas certificadas no SIGEF pela ATI...' if forcar else
+                      'Vizinhos com SIGEF ainda não consultados: consultando as parcelas certificadas pela ATI...')
+    memoria = parcelasSigef(extensaoDaAti(camadaAti, MARGEM_SIGEF_M if margem is None else margem), feedback)
     if memoria is None:
         return fixa
     if fixa is None:
@@ -130,7 +131,7 @@ def garantirParcelasSigef(context, feedback, camadaAti):
     return fixa
 
 
-def garantirVizinhosCAR(context, feedback, camadaAti):
+def garantirVizinhosCAR(context, feedback, camadaAti, forcar=False, margem=None):
     """
     Camada de CARs vizinhos para a análise. Ainda não consultada no projeto: faz a Consulta CAR pela extensão
     da ATI (grava na camada fixa CAR_Vizinhos_SICAR, ou devolve a camada temporária se o projeto não está salvo).
@@ -139,14 +140,15 @@ def garantirVizinhosCAR(context, feedback, camadaAti):
 
     projeto = context.project() or QgsProject.instance()
     fixa = camadaFixa(NOME_VIZINHOS, projeto)
-    if jaConsultada(fixa):
+    if not forcar and jaConsultada(fixa):
         return fixa
-    if fixa is None:
+    if fixa is None and not forcar:
         existentes = [c for c in projeto.mapLayersByName(NOME_VIZINHOS) if c.featureCount() > 0]
         if existentes:
             return existentes[0]
-    feedback.pushInfo('Vizinhos com CAR ainda não consultados: fazendo a Consulta CAR pela extensão da ATI...')
-    extensao = extensaoDaAti(camadaAti, MARGEM_VIZINHOS_M)
+    feedback.pushInfo('Fazendo a Consulta CAR pela extensão da ATI...' if forcar else
+                      'Vizinhos com CAR ainda não consultados: fazendo a Consulta CAR pela extensão da ATI...')
+    extensao = extensaoDaAti(camadaAti, MARGEM_VIZINHOS_M if margem is None else margem)
     filho = QgsProcessingContext()
     filho.setProject(projeto)
     try:
@@ -191,24 +193,26 @@ def completarSigef(context, feedback, camadaAti, camada):
     return camada
 
 
-def garantirRestricoes(context, feedback, camadaAti):
+def garantirRestricoes(context, feedback, camadaAti, forcar=False, margem=None):
     """
     Restrições oficiais (UC, TI, assentamentos, embargos, terras públicas). Ainda não consultadas no projeto:
-    faz a consulta de restrições (1d) pela ATI e grava na camada fixa Restricoes_Territoriais.
+    faz a consulta de restrições (1e) pela ATI e grava na camada fixa Restricoes_Territoriais.
     """
     import processing
 
     projeto = context.project() or QgsProject.instance()
     fixa = garantirCamadaFixa(NOME_RESTRICOES, projeto)
-    if jaConsultada(fixa):
+    if not forcar and jaConsultada(fixa):
         return fixa
-    feedback.pushInfo('Restrições oficiais ainda não consultadas: fazendo a consulta de restrições pela ATI '
-                      '(pode levar cerca de 1 minuto)...')
+    feedback.pushInfo(('Consultando as restrições oficiais' if forcar else
+                       'Restrições oficiais ainda não consultadas: fazendo a consulta de restrições') +
+                      ' pela ATI (pode levar cerca de 1 minuto)...')
     filho = QgsProcessingContext()
     filho.setProject(projeto)
     try:
         resultado = processing.run('GeoCAR:consultarestricoescar', {
-            'INPUT_ATI': camadaAti, 'MARGEM': MARGEM_RESTRICOES_M, 'OUTPUT': 'TEMPORARY_OUTPUT'},
+            'INPUT_ATI': camadaAti, 'MARGEM': MARGEM_RESTRICOES_M if margem is None else margem,
+            'OUTPUT': 'TEMPORARY_OUTPUT'},
             context=filho, feedback=feedback)
     except Exception as erro:
         feedback.reportError(f'Consulta de restrições não concluída: {erro}', fatalError=False)
@@ -235,7 +239,7 @@ def completarRestricoes(context, feedback, camadaAti, camadas):
     return camadas
 
 
-def garantirProdes(context, feedback, camadaAti):
+def garantirProdes(context, feedback, camadaAti, forcar=False, margem=None):
     """
     Desmatamento do PRODES para a análise. Ainda não consultado no projeto: consulta pela extensão da ATI e grava
     na camada fixa Desmatamento_PRODES (projeto salvo) ou devolve a camada de memória.
@@ -244,10 +248,11 @@ def garantirProdes(context, feedback, camadaAti):
 
     projeto = context.project() or QgsProject.instance()
     fixa = garantirCamadaFixa(NOME_PRODES, projeto)
-    if jaConsultada(fixa):
+    if not forcar and jaConsultada(fixa):
         return fixa
-    feedback.pushInfo('Desmatamento (PRODES) ainda não consultado: consultando o TerraBrasilis/INPE pela ATI...')
-    memoria = consultarProdes(extensaoDaAti(camadaAti, MARGEM_PRODES_M), feedback)
+    feedback.pushInfo('Consultando o desmatamento do PRODES (TerraBrasilis/INPE) pela ATI...' if forcar else
+                      'Desmatamento (PRODES) ainda não consultado: consultando o TerraBrasilis/INPE pela ATI...')
+    memoria = consultarProdes(extensaoDaAti(camadaAti, MARGEM_PRODES_M if margem is None else margem), feedback)
     if memoria is None:
         return fixa if jaConsultada(fixa) else None
     if fixa is None:

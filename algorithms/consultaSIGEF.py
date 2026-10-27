@@ -108,7 +108,7 @@ class ConsultaSigefCAR(QgsProcessingAlgorithm):
         return 'consultasigefcar'
 
     def displayName(self):
-        return self.tr('b. Consulta SIGEF (INCRA)')
+        return self.tr('c. Consulta SIGEF (INCRA)')
 
     def group(self):
         return self.tr('1. 🔍 Consultas')

@@ -244,7 +244,7 @@ class baixarCAR(QgsProcessingAlgorithm):
         return 'baixarcar'
 
     def displayName(self):
-        return self.tr('a. Consulta CAR')
+        return self.tr('b. Consulta CAR')
 
     def group(self):
         return self.tr('1. 🔍 Consultas')

@@ -30,7 +30,7 @@ def _valor(atributos, nome):
 
 def comparar_sigef(perimetro, area_imovel_ha, src, camadas):
     """
-    camadas: camadas de parcelas certificadas (ex.: Parcelas_SIGEF da ferramenta 1b).
+    camadas: camadas de parcelas certificadas (ex.: Parcelas_SIGEF da ferramenta 1c).
     Retorna None se nenhuma camada foi informada; senão um dict com
     parcelas (lista), sem_certificacao_ha, fora_ati_ha, matriculas, itens (para a camada de divergências).
     """

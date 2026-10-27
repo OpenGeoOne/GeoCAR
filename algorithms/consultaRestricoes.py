@@ -252,7 +252,7 @@ class ConsultaRestricoesCAR(QgsProcessingAlgorithm):
         return 'consultarestricoescar'
 
     def displayName(self):
-        return self.tr('d. Consulta de restrições (UC, TI, assentamentos, embargos)')
+        return self.tr('e. Consulta de restrições (UC, TI, assentamentos, embargos)')
 
     def group(self):
         return self.tr('1. 🔍 Consultas')

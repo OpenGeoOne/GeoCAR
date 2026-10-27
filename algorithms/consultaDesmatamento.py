@@ -116,7 +116,7 @@ class ConsultaDesmatamentoCAR(QgsProcessingAlgorithm):
         return 'consultadesmatamentocar'
 
     def displayName(self):
-        return self.tr('e. Consulta desmatamento (PRODES/INPE)')
+        return self.tr('f. Consulta desmatamento (PRODES/INPE)')
 
     def group(self):
         return self.tr('1. 🔍 Consultas')
