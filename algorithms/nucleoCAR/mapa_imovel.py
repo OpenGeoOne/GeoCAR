@@ -186,7 +186,10 @@ def gerar_mapa(projeto, camadaAti, camadas, fundo, identificacao, caminho, src, 
     legenda.setAutoUpdateModel(False)
     raiz = QgsLayerTree()
     for camada in [camadaAti] + ordem:
-        raiz.addLayer(camada).setName(camada.name().replace('_', ' '))
+        no = raiz.addLayer(camada)
+        # Rótulo só na legenda: sem setUseLayerName(False), o setName renomearia a própria camada do projeto
+        no.setUseLayerName(False)
+        no.setName(camada.name().replace('_', ' '))
     legenda.model().setRootGroup(raiz)
     for estilo, tamanho, negrito in ((QgsLegendStyle.Title, 9, True), (QgsLegendStyle.Group, 7, True),
                                      (QgsLegendStyle.Subgroup, 7, True), (QgsLegendStyle.SymbolLabel, 6.5, False)):
